@@ -551,28 +551,30 @@ class canChannel(object):
         self.canlib.fn = inspect.stack()[0][3]
         self.dll.canBusOff(self.handle)
 
-    def write(self, id, msg, flag=0):
+    # The variable name id (as used by canlib) is a built-in function in Python,
+    # so we use the name id_ instead
+    def write(self, id_, msg, flag=0):
         self.canlib.fn = inspect.stack()[0][3]
         data = (c_ubyte * len(msg))(*msg)
-        self.dll.canWrite(self.handle, id, byref(data), len(msg), flag)
+        self.dll.canWrite(self.handle, id_, byref(data), len(msg), flag)
 
-    def writeWait(self, id, msg, flag=0, timeout=0):
+    def writeWait(self, id_, msg, flag=0, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
         data = (c_ubyte * len(msg))(*msg)
-        self.dll.canWriteWait(self.handle, id, byref(data), len(msg), flag,
+        self.dll.canWriteWait(self.handle, id_, byref(data), len(msg), flag,
                               timeout)
 
     def read(self, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
         msg = self.canlib.canMessage()
-        id = c_long()
+        id_ = c_long()
         dlc = c_uint()
         flag = c_uint()
         time = c_ulong()
-        self.dll.canReadWait(self.handle, byref(id), byref(msg), byref(dlc),
+        self.dll.canReadWait(self.handle, byref(id_), byref(msg), byref(dlc),
                              byref(flag), byref(time), timeout)
         msgList = [msg[i] for i in range(len(msg))]
-        return id.value, msgList[:dlc.value], dlc.value, flag.value, time.value
+        return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.stack()[0][3]
@@ -584,22 +586,22 @@ class canChannel(object):
                                           sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
-    def readSpecificSkip(self, id, timeout=0):
+    def readSpecificSkip(self, id_, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
         msg = self.canlib.canMessage()
-        id = c_long(id)
+        id_ = c_long(id_)
         dlc = c_uint()
         flag = c_uint()
         time = c_ulong(timeout)
-        self.dll.canReadSpecificSkip(self.handle, id, byref(msg), byref(dlc),
+        self.dll.canReadSpecificSkip(self.handle, id_, byref(msg), byref(dlc),
                                      byref(flag), byref(time))
         msgList = [msg[i] for i in range(len(msg))]
-        return id.value, msgList[:dlc.value], dlc.value, flag.value, time.value
+        return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
 
-    def readSyncSpecific(self, id, timeout=0):
+    def readSyncSpecific(self, id_, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
-        id = c_long(id)
-        self.dll.canReadSyncSpecific(self.handle, id, timeout)
+        id_ = c_long(id_)
+        self.dll.canReadSyncSpecific(self.handle, id_, timeout)
 
     def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY,
                         eventNo=ord('a'), data=0):
@@ -728,11 +730,11 @@ if __name__ == '__main__':
 
     while True:
         try:
-            id, msg, dlc, flg, time = ch1.read()
-            print("%9d  %9d  0x%02x  %d  %s" % (id, time, flg, dlc, msg))
+            msgId, msg, dlc, flg, time = ch1.read()
+            print("%9d  %9d  0x%02x  %d  %s" % (msgId, time, flg, dlc, msg))
             for i in range(dlc):
                 msg[i] = (msg[i]+1) % 256
-            ch1.write(id, msg, flg)
+            ch1.write(msgId, msg, flg)
         except (canNoMsg) as ex:
             None
         except (canError) as ex:
