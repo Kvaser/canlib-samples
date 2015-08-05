@@ -2,22 +2,19 @@ from xml.dom import minidom
 import canlib
 import kvaMemoLibXml
 
-# If you do not have canlib.py in the current directory, set the environmental variable:
+# If you do not have canlib.py in the current directory, set the environmental
+# variable:
 #
 #  [C:\]set PYTHONPATH=c:\dev\canlib\Samples\Python
 #
 #  invoke with -help for more help
 
-TRIG_LOG_ALL  = 'TRIG_LOG_ALL'
+TRIG_LOG_ALL = 'TRIG_LOG_ALL'
 TRIG_ON_EVENT = 'TRIG_ON_EVENT'
 TRIG_SCRIPTED = 'TRIG_SCRIPTED'
 
 ACTION_START_LOG = 'ACTION_START_LOG'
-ACTION_STOP_LOG  = 'ACTION_STOP_LOG'
-
-#----------------------------------------------------------------------#
-# kvFilter class                                                       #
-#----------------------------------------------------------------------#
+ACTION_STOP_LOG = 'ACTION_STOP_LOG'
 
 
 class kvFilter(object):
@@ -29,32 +26,30 @@ class kvFilter(object):
         if isinstance(object, kvFilterMsgStop):
             self.addMsgStop(object)
         else:
-            raise Exception("ERROR: (kvFilter) Can not add object of type %s!" % type(object).__name__)
+            raise Exception("ERROR: (kvFilter) Can not add object of type %s!"
+                            % type(object).__name__)
 
     def addMsgStop(self, msgStop):
         self.msgStop.append(msgStop)
 
+
 class kvFilterMsgStop(object):
     def __init__(self, active=True, protocol=None, msgid=None, msgid_min=None):
-        self.active    = active
-        self.msgid     = msgid
+        self.active = active
+        self.msgid = msgid
         self.msgid_min = msgid_min
         if self.msgid_min is None:
             self.msgid_min = self.msgid
-
-#----------------------------------------------------------------------#
-# kvTrigger class                                                      #
-#----------------------------------------------------------------------#
 
 
 class kvTrigger(object):
 
     def __init__(self, logmode=TRIG_LOG_ALL, fifomode=True):
-        self.logmode        = logmode
-        self.fifomode       = fifomode
-        self.trigVarTimer   = []
-        self.trigVarMsgId   = []
-        self.statement      = []
+        self.logmode = logmode
+        self.fifomode = fifomode
+        self.trigVarTimer = []
+        self.trigVarMsgId = []
+        self.statement = []
 
     def addTrigVarTimer(self, trigVarTimer):
         self.trigVarTimer.append(trigVarTimer)
@@ -65,48 +60,57 @@ class kvTrigger(object):
     def addStatement(self, trigStatement):
         self.statement.append(trigStatement)
 
+
 class kvScript(object):
     def __init__(self, filename):
         self.filename = filename
 
+
 class kvTrigVarTimer(object):
     def __init__(self, idx=0, offset=600, repeat=False, channel=0, timeout=0):
-        self.idx     = idx
-        self.offset  = offset
-        self.repeat  = False
+        self.idx = idx
+        self.offset = offset
+        self.repeat = False
         self.channel = channel
         self.timeout = timeout
 
+
 class kvTrigVarMsgId(object):
-    def __init__(self, idx=0, channel=0, timeout=0, msgid=0, msgid_min=None, protocol="NONE"):
-        self.idx       = idx
-        self.channel   = channel
-        self.timeout   = timeout
-        self.msgid     = msgid
+    def __init__(self, idx=0, channel=0, timeout=0, msgid=0, msgid_min=None,
+                 protocol="NONE"):
+        self.idx = idx
+        self.channel = channel
+        self.timeout = timeout
+        self.msgid = msgid
         self.msgid_min = msgid_min
-        self.protocol  = protocol
+        self.protocol = protocol
         if self.msgid_min is None:
             self.msgid_min = self.msgid
 
+
 class kvTrigStatement(object):
-    def __init__(self, noOfActions=1, preTrigger=0, postTrigger=0, postFixExpr=0, function=ACTION_START_LOG, param=0):
+    def __init__(self, noOfActions=1, preTrigger=0, postTrigger=0,
+                 postFixExpr=0, function=ACTION_START_LOG, param=0):
         self.noOfActions = noOfActions
-        self.preTrigger  = preTrigger
+        self.preTrigger = preTrigger
         self.postTrigger = postTrigger
         self.postFixExpr = postFixExpr
-        self.function    = function
-        self.param       = param
+        self.function = function
+        self.param = param
+
 
 class kvMemoConfig(object):
 
-    def __init__(self, version="1.5", afterburner=0, log_all=False, fifo_mode="NO", param_lif=None, param_xml=None):
+    def __init__(self, version="1.5", afterburner=0, log_all=False,
+                 fifo_mode="NO", param_lif=None, param_xml=None):
         if param_lif is not None:
             self.parseLif(param_lif)
         elif param_xml is not None:
             self.parseXml(param_xml)
         else:
             imp = minidom.DOMImplementation()
-            doctype = imp.createDocumentType(qualifiedName="KVASER", publicId="", systemId="")
+            doctype = imp.createDocumentType(qualifiedName="KVASER",
+                                             publicId="", systemId="")
             self.document = imp.createDocument(None, 'KVASER', doctype)
             root = self.document.documentElement
             self.document.appendChild(root)
@@ -125,7 +129,6 @@ class kvMemoConfig(object):
             xmlCanpower = self.document.createElement("CANPOWER")
             xmlCanpower.setAttribute("timeout", str(afterburner))
             xmlSettings.appendChild(xmlCanpower)
-
 
     def addBusparams(self, rateParam, channel=0, silent=False):
         child = self.document.getElementsByTagName('BUSPARAMS')
@@ -147,7 +150,8 @@ class kvMemoConfig(object):
         newchild.setAttribute("samples", str(rateParam.nosamp))
         newchild.setAttribute("SJW", str(rateParam.sjw))
         newchild.setAttribute("silent", "YES" if silent else "NO")
-        newchild.setAttribute("highspeed", "YES" if rateParam.syncMode else "NO")
+        newchild.setAttribute("highspeed",
+                              "YES" if rateParam.syncMode else "NO")
         child.appendChild(newchild)
 
     def add(self, object):
@@ -161,17 +165,14 @@ class kvMemoConfig(object):
     def addFilter(self, filter):
         xmlFilterBlock = self.document.createElement("FILTERBLOCK")
         self.document.documentElement.appendChild(xmlFilterBlock)
-        # numPassFilter  = len(filter.msgPass)
-        # numFilter      = numPassFilter + len(filter.msgStop)
-        # print "numFilter: %d" % numFilter
-        # #qqqmac hard coded for now
-        # if numFilter == 1:
-        #     maskHigh = 0
-        #     maskLow  = 1
+        # numPassFilter = len(filter.msgPass) numFilter = numPassFilter +
+        # len(filter.msgStop) print "numFilter: %d" % numFilter #qqqmac hard
+        # coded for now if numFilter == 1: maskHigh = 0 maskLow = 1
         # xmlFilterArray = self.document.createElement("filterarray")
         # xmlFilterArray.setAttribute("activeFiltersMaskHigh", str(maskHigh))
         # xmlFilterArray.setAttribute("activeFiltersMaskLow", str(maskLow))
-        # xmlFilterArray.setAttribute("numberOfPassFilters", str(numPassFilter))
+        # xmlFilterArray.setAttribute("numberOfPassFilters",
+        # str(numPassFilter))
         # xmlFilterArray.setAttribute("totalNumberOfFilters", str(numFilter))
         # xmlFilterBlock.appendChild(xmlFilterArray)
         xmlFilterArray = self.document.createElement("filterarray")
@@ -196,7 +197,6 @@ class kvMemoConfig(object):
         xmlFilterMsg.setAttribute("msgid", "0xa")
         xmlFilterMsg.setAttribute("msgid_min", "0x7")
         xmlFilterMsg.setAttribute("type", "STOP")
-
 
         xmlFilterArray = self.document.createElement("filterarray")
         xmlFilterBlock.appendChild(xmlFilterArray)
@@ -233,7 +233,7 @@ class kvMemoConfig(object):
         xmlTriggerBlock = self.document.createElement("TRIGGERBLOCK")
         self.document.documentElement.appendChild(xmlTriggerBlock)
         # qqqmac We currently need a triggerblock
-        if trigger == None:
+        if trigger is None:
             return
 
         xmlTriggers = self.document.createElement("TRIGGERS")
@@ -243,10 +243,9 @@ class kvMemoConfig(object):
             xmlTrigger.setAttribute("idx", str(obj.idx))
             xmlTrigger.setAttribute("offset", str(obj.offset))
             xmlTrigger.setAttribute("repeat", "YES" if obj.repeat else "NO")
-            #xmlTrigger.setAttribute("channel", str(obj.channel))
+            # xmlTrigger.setAttribute("channel", str(obj.channel))
             xmlTrigger.setAttribute("timeout", str(obj.timeout))
             xmlTriggers.appendChild(xmlTrigger)
-
 
         for obj in trigger.trigVarMsgId:
             xmlTrigger = self.document.createElement("TRIGGER_MSG_ID")
@@ -274,7 +273,6 @@ class kvMemoConfig(object):
             xmlAction.setAttribute("function", obj.function)
             xmlAction.setAttribute("param", str(obj.param))
             xmlStatement.appendChild(xmlAction)
-
 
     def addScript(self, script, channel=0):
         xmlScripts = self.document.createElement("SCRIPTS")
@@ -309,9 +307,9 @@ if __name__ == '__main__':
 
     cl = canlib.canlib()
     rate = cl.translateBaud(freq=canlib.canBITRATE_1M)
-    print rate
+    print(rate)
 
-    print "- Manually creating configuration -----------------"
+    print("- Manually creating configuration -----------------")
     memoConfig = kvMemoConfig(afterburner=10000)
     memoConfig.addBusparams(channel=0, rateParam=rate)
     memoConfig.addBusparams(channel=1, rateParam=rate)
@@ -321,9 +319,11 @@ if __name__ == '__main__':
     trigger.addTrigVarTimer(trigVarTimer)
     trigVarTimer = kvTrigVarTimer(idx=1, offset=20)
     trigger.addTrigVarTimer(trigVarTimer)
-    trigStatement = kvTrigStatement(postFixExpr=0, function=ACTION_START_LOG, param=1)
+    trigStatement = kvTrigStatement(postFixExpr=0, function=ACTION_START_LOG,
+                                    param=1)
     trigger.addStatement(trigStatement)
-    trigStatement = kvTrigStatement(postFixExpr=1, function=ACTION_STOP_LOG, param=1)
+    trigStatement = kvTrigStatement(postFixExpr=1, function=ACTION_STOP_LOG,
+                                    param=1)
     trigger.addStatement(trigStatement)
 
     memoConfig.addTrigger(trigger)
@@ -334,7 +334,7 @@ if __name__ == '__main__':
     outfile.write(memoConfig.toXml())
     outfile.close()
 
-    print "- Converting conf.lif to xml -----------------"
+    print("- Converting conf.lif to xml -----------------")
     infile = open("conf.lif", 'rb')
     conf_lif = infile.read()
     infile.close()
@@ -343,12 +343,12 @@ if __name__ == '__main__':
     outfile.write(memoConfig2.toXml())
     outfile.close()
 
-    print "- Writing manual configuration to firstTry.lif -----------------"
+    print("- Writing manual configuration to firstTry.lif -----------------")
     outfile = open("firstTry.lif", 'wb')
     outfile.write(memoConfig.toLif())
     outfile.close()
 
-    print "- Converting firstTry.lif to xml -----------------"
+    print("- Converting firstTry.lif to xml -----------------")
     infile = open("firstTry.lif", 'rb')
     conf_lif = infile.read()
     infile.close()

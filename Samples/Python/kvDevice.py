@@ -1,8 +1,11 @@
+from __future__ import print_function
+
 import kvMemoConfig
 import canlib
 import kvmlib
 import re
 import time
+
 
 class kvDevice():
     # ean:    73-30130-00671-3
@@ -11,14 +14,14 @@ class kvDevice():
 
     @staticmethod
     def ean2ean_hi(ean):
-        eanCompact = re.sub('-','',ean)
-        match = re.match('(\d{5})(\d{8})',eanCompact)
+        eanCompact = re.sub('-', '', ean)
+        match = re.match('(\d{5})(\d{8})', eanCompact)
         return int('0x%s' % match.group(1), 0)
 
     @staticmethod
     def ean2ean_lo(ean):
-        eanCompact = re.sub('-','',ean)
-        match = re.match('(\d{5})(\d{8})',eanCompact)
+        eanCompact = re.sub('-', '', ean)
+        match = re.match('(\d{5})(\d{8})', eanCompact)
         return int('0x%s' % match.group(2), 0)
 
     @staticmethod
@@ -30,8 +33,8 @@ class kvDevice():
     @staticmethod
     def allDevices():
         devices = []
-        cl      = canlib.canlib()
-        indx    = -1
+        cl = canlib.canlib()
+        indx = -1
         cl.reinitializeLibrary()
         for ch in range(cl.getNumberOfChannels()):
             try:
@@ -46,7 +49,8 @@ class kvDevice():
                 indx += 1
         return devices
 
-    def __init__(self, ch=None, flags=0, canlibHnd=None, ean=None, serial=None):
+    def __init__(self, ch=None, flags=0, canlibHnd=None, ean=None,
+                 serial=None):
         if canlibHnd is None:
             self.canlib = canlib.canlib()
         else:
@@ -56,34 +60,34 @@ class kvDevice():
             ch = self._findChannel(ean, serial)
 
         if ch is not None:
-            self.channel  = self.canlib.openChannel(ch, flags)
+            self.channel = self.canlib.openChannel(ch, flags)
             self._loadInfo()
             self.close()
         else:
             self.channel = None
             self._loadInfo()
-            self._ean     = ean
-            self._serial  = serial
+            self._ean = ean
+            self._serial = serial
         self._channel = ch
         self.memo = None
 
     def _loadInfo(self):
         if self.channel is not None:
-            self._card    = self.cardNumber()
-            self._name    = self.name()
-            self._ean     = self.ean()
-            self._serial  = self.serial()
-            self._fw      = self.fw()
-            self._driver  = self.driverName()
+            self._card = self.cardNumber()
+            self._name = self.name()
+            self._ean = self.ean()
+            self._serial = self.serial()
+            self._fw = self.fw()
+            self._driver = self.driverName()
             self._defaultHostname = self.defaultHostname()
         else:
-            self.channel  = None
-            self._card    = None
-            self._name    = None
-            self._ean     = None
-            self._serial  = None
-            self._fw      = None
-            self._driver  = None
+            self.channel = None
+            self._card = None
+            self._name = None
+            self._ean = None
+            self._serial = None
+            self._fw = None
+            self._driver = None
             self._defaultHostname = None
 
     def memoOpenEx(self):
@@ -104,7 +108,8 @@ class kvDevice():
         if self.memo is None:
             memoWasClosed = True
             self.memoOpen()
-        self.config = kvMemoConfig.kvMemoConfig(param_lif=self.memo.kmfReadConfig())
+        self.config = kvMemoConfig.kvMemoConfig(
+            param_lif=self.memo.kmfReadConfig())
         if memoWasClosed:
             self.memoClose()
         return self.config
@@ -164,13 +169,13 @@ class kvDevice():
 
     def defaultHostname(self):
         ean_part = '%x' % kvDevice.ean2ean_lo(self._ean)
-        return 'kv-%s-%06d' % (ean_part[-5:],self._serial)
+        return 'kv-%s-%06d' % (ean_part[-5:], self._serial)
 
     def hasScript(self):
         if self._ean == '73-30130-00567-9' or self._ean == '73-30130-00778-9':
-            return True;
+            return True
         else:
-            return False;
+            return False
 
     def open(self, flags=0, timeout=10):
         if self.channel is not None:
@@ -183,10 +188,12 @@ class kvDevice():
                 self._channel = ch
                 self._loadInfo()
 
-            if self.channel == None:
-                print 'Waiting for device %s %s. Slept %ds (timeout:%d)' % (self._ean, self._serial, time.time() - startTime, timeout)
+            if self.channel is None:
+                print('Waiting for device %s %s. Slept %ds (timeout:%d)' % (
+                    self._ean, self._serial, time.time() - startTime, timeout))
                 time.sleep(2)
-            if (not (self.channel is None)) or ((time.time() - startTime) > timeout):
+            if (not (self.channel is None)) or (
+                    (time.time() - startTime) > timeout):
                 break
         if self.channel is None:
             raise Exception('ERROR: Could not find device %s %s (timeout: %d s).' % (self._ean, self._serial, timeout))
@@ -196,29 +203,30 @@ class kvDevice():
         self.canlib.reinitializeLibrary()
         for ch in range(self.canlib.getNumberOfChannels()):
             try:
-                ean    = self.canlib.getChannelData_EAN(ch)
+                ean = self.canlib.getChannelData_EAN(ch)
                 serial = self.canlib.getChannelData_Serial(ch)
             except canlib.canError as e:
                 if e.canERR == canlib.canERR_NOCARD:
-                    print 'Card was removed'
+                    print('Card was removed')
                     break
                 else:
                     raise e
-            if (ean == wanted_ean) and (serial == wanted_serial or wanted_serial is None):
+            if (ean == wanted_ean) and (
+                    serial == wanted_serial or wanted_serial is None):
                 channel = ch
                 break
         return channel
 
     def _waitToDisappear(self, timeout=10):
         startTime = time.time()
-        print 'Wait for disappear',
+        print('Wait for disappear', end="")
         while self._findChannel(self._ean, self._serial) is not None:
             if time.time() - startTime > timeout:
-                print '\nWARNING: Timeout (%s s) reached while  waiting for device (ean:%s, sn:%s) to disappear!' % (timeout, self._ean, self._serial)
-                print 'I will keep running and assume that I was too slow...'
+                print('\nWARNING: Timeout (%s s) reached while waiting for device (ean:%s, sn:%s) to disappear!' % (timeout, self._ean, self._serial))
+                print('I will keep running and assume that I was too slow...')
                 return
             time.sleep(1)
-            print '.',
+            print('.', end="")
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -229,7 +237,8 @@ class kvDevice():
         if self._ean == other._ean and self._serial == other._serial:
             return True
         else:
-            if (self._serial is None or other._serial is None) and self._ean == other._ean:
+            if (self._serial is None or other._serial is None) and \
+               self._ean == other._ean:
                 return True
             else:
                 return False
@@ -238,7 +247,7 @@ class kvDevice():
         return hash("%s %s" % (self._ean, self._serial))
 
     def __str__(self):
-        text =        'Device: %s\n' % self._name
+        text = 'Device: %s\n' % self._name
         text = text + 'EAN           : %s\n' % self._ean
         text = text + 'S/N           : %s\n' % self._serial
         if self._fw is not None:
@@ -253,21 +262,20 @@ class kvDevice():
 
 if __name__ == '__main__':
     devices = kvDevice.allDevices()
-    print "List all %d devices..." % (len(devices))
+    print("List all %d devices..." % (len(devices)))
     for dev in devices:
-        print "\n", dev
+        print("\n", dev)
 
-    print "Open device..."
+    print("Open device...")
     cmd = 'kvDevice(ch=2)'
     dev = eval(cmd)
-    print "-------------- %s \n %s" % (cmd, dev)
+    print("-------------- %s \n %s" % (cmd, dev))
     cmd = 'kvDevice(ean="73-30130-99010-4")'
     dev = eval(cmd)
-    print "-------------- %s \n %s" % (cmd, dev)
+    print("-------------- %s \n %s" % (cmd, dev))
     cmd = 'kvDevice(ean="73-30130-00567-9", serial=71)'
     dev = eval(cmd)
-    print "-------------- %s \n %s" % (cmd, dev)
+    print("-------------- %s \n %s" % (cmd, dev))
     cmd = 'kvDevice(ean="73-30130-00567-9", serial=75)'
     dev = eval(cmd)
-    print "-------------- %s \n %s" % (cmd, dev)
-
+    print("-------------- %s \n %s" % (cmd, dev))

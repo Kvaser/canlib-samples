@@ -4,153 +4,155 @@ import struct
 import logging
 import inspect
 
-#------------------------------------------------------------------#
-# Canlib constants                                                 #
-#------------------------------------------------------------------#
+# -------------------
+# Canlib constants
+# -------------------
 
-canOK                                   =    0
-canERR_PARAM                            =   -1
-canERR_NOMSG                            =   -2
-canERR_NOTFOUND                         =   -3
-canERR_NOCHANNELS                       =   -5
-canERR_TIMEOUT                          =   -7
-canERR_INVHANDLE                        =  -10
-canERR_NOCARD                           =  -26
-canERR_NOT_IMPLEMENTED                  =  -32
+canOK = 0
+canERR_PARAM = -1
+canERR_NOMSG = -2
+canERR_NOTFOUND = -3
+canERR_NOCHANNELS = -5
+canERR_TIMEOUT = -7
+canERR_INVHANDLE = -10
+canERR_NOCARD = -26
+canERR_SCRIPT_FAIL = -39
+canERR_NOT_IMPLEMENTED = -32
 
-canOPEN_EXCLUSIVE                       = 0x0008
-canOPEN_REQUIRE_EXTENDED                = 0x0010
-canOPEN_ACCEPT_VIRTUAL                  = 0x0020
-canOPEN_OVERRIDE_EXCLUSIVE              = 0x0040
-canOPEN_REQUIRE_INIT_ACCESS             = 0x0080
-canOPEN_NO_INIT_ACCESS                  = 0x0100
-canOPEN_ACCEPT_LARGE_DLC                = 0x0200
-canOPEN_CAN_FD                          = 0x0400
-canOPEN_CAN_FD_NONISO                   = 0x0800
+canOPEN_EXCLUSIVE = 0x0008
+canOPEN_REQUIRE_EXTENDED = 0x0010
+canOPEN_ACCEPT_VIRTUAL = 0x0020
+canOPEN_OVERRIDE_EXCLUSIVE = 0x0040
+canOPEN_REQUIRE_INIT_ACCESS = 0x0080
+canOPEN_NO_INIT_ACCESS = 0x0100
+canOPEN_ACCEPT_LARGE_DLC = 0x0200
+canOPEN_CAN_FD = 0x0400
+canOPEN_CAN_FD_NONISO = 0x0800
 
-canBITRATE_1M                           = -1
-canBITRATE_500K                         = -2
-canBITRATE_250K                         = -3
-canBITRATE_125K                         = -4
-canBITRATE_100K                         = -5
-canBITRATE_62K                          = -6
-canBITRATE_50K                          = -7
-canBITRATE_83K                          = -8
-canBITRATE_10K                          = -9
+canBITRATE_1M = -1
+canBITRATE_500K = -2
+canBITRATE_250K = -3
+canBITRATE_125K = -4
+canBITRATE_100K = -5
+canBITRATE_62K = -6
+canBITRATE_50K = -7
+canBITRATE_83K = -8
+canBITRATE_10K = -9
 
-canFD_BITRATE_500K_80P                  = -1001;
-canFD_BITRATE_1M_80P                    = -1002;
-canFD_BITRATE_2M_80P                    = -1003;
+canFD_BITRATE_500K_80P = -1001
+canFD_BITRATE_1M_80P = -1002
+canFD_BITRATE_2M_80P = -1003
 
-canIOCTL_PREFER_EXT                     = 1
-canIOCTL_PREFER_STD                     = 2
-canIOCTL_CLEAR_ERROR_COUNTERS           = 5
-canIOCTL_SET_TIMER_SCALE                = 6
-canIOCTL_SET_TXACK                      = 7
-canIOCTL_GET_RX_BUFFER_LEVEL            = 8
-canIOCTL_GET_TX_BUFFER_LEVEL            = 9
-canIOCTL_FLUSH_RX_BUFFER                = 10
-canIOCTL_FLUSH_TX_BUFFER                = 11
-canIOCTL_GET_TIMER_SCALE                = 12
-canIOCTL_SET_TXRQ                       = 13
-canIOCTL_GET_EVENTHANDLE                = 14
-canIOCTL_SET_BYPASS_MODE                = 15
-canIOCTL_SET_WAKEUP                     = 16
-canIOCTL_MAP_RXQUEUE                    = 18
-canIOCTL_GET_WAKEUP                     = 19
-canIOCTL_SET_REPORT_ACCESS_ERRORS       = 20
-canIOCTL_GET_REPORT_ACCESS_ERRORS       = 21
-canIOCTL_CONNECT_TO_VIRTUAL_BUS         = 22
-canIOCTL_DISCONNECT_FROM_VIRTUAL_BUS    = 23
-canIOCTL_SET_USER_IOPORT                = 24
-canIOCTL_GET_USER_IOPORT                = 25
-canIOCTL_SET_BUFFER_WRAPAROUND_MODE     = 26
-canIOCTL_SET_RX_QUEUE_SIZE              = 27
-canIOCTL_SET_USB_THROTTLE               = 28
-canIOCTL_GET_USB_THROTTLE               = 29
-canIOCTL_SET_BUSON_TIME_AUTO_RESET      = 30
-canIOCTL_GET_TXACK                      = 31
-canIOCTL_SET_LOCAL_TXECHO               = 32
-canIOCTL_SET_ERROR_FRAMES_REPORTING     = 33
-canIOCTL_GET_CHANNEL_QUALITY            = 34
-canIOCTL_GET_ROUNDTRIP_TIME             = 35
-canIOCTL_GET_BUS_TYPE                   = 36
-canIOCTL_GET_DEVNAME_ASCII              = 37
-canIOCTL_GET_TIME_SINCE_LAST_SEEN       = 38
-canIOCTL_GET_TREF_LIST                  = 39
+canIOCTL_PREFER_EXT = 1
+canIOCTL_PREFER_STD = 2
+canIOCTL_CLEAR_ERROR_COUNTERS = 5
+canIOCTL_SET_TIMER_SCALE = 6
+canIOCTL_SET_TXACK = 7
+canIOCTL_GET_RX_BUFFER_LEVEL = 8
+canIOCTL_GET_TX_BUFFER_LEVEL = 9
+canIOCTL_FLUSH_RX_BUFFER = 10
+canIOCTL_FLUSH_TX_BUFFER = 11
+canIOCTL_GET_TIMER_SCALE = 12
+canIOCTL_SET_TXRQ = 13
+canIOCTL_GET_EVENTHANDLE = 14
+canIOCTL_SET_BYPASS_MODE = 15
+canIOCTL_SET_WAKEUP = 16
+canIOCTL_MAP_RXQUEUE = 18
+canIOCTL_GET_WAKEUP = 19
+canIOCTL_SET_REPORT_ACCESS_ERRORS = 20
+canIOCTL_GET_REPORT_ACCESS_ERRORS = 21
+canIOCTL_CONNECT_TO_VIRTUAL_BUS = 22
+canIOCTL_DISCONNECT_FROM_VIRTUAL_BUS = 23
+canIOCTL_SET_USER_IOPORT = 24
+canIOCTL_GET_USER_IOPORT = 25
+canIOCTL_SET_BUFFER_WRAPAROUND_MODE = 26
+canIOCTL_SET_RX_QUEUE_SIZE = 27
+canIOCTL_SET_USB_THROTTLE = 28
+canIOCTL_GET_USB_THROTTLE = 29
+canIOCTL_SET_BUSON_TIME_AUTO_RESET = 30
+canIOCTL_GET_TXACK = 31
+canIOCTL_SET_LOCAL_TXECHO = 32
+canIOCTL_SET_ERROR_FRAMES_REPORTING = 33
+canIOCTL_GET_CHANNEL_QUALITY = 34
+canIOCTL_GET_ROUNDTRIP_TIME = 35
+canIOCTL_GET_BUS_TYPE = 36
+canIOCTL_GET_DEVNAME_ASCII = 37
+canIOCTL_GET_TIME_SINCE_LAST_SEEN = 38
+canIOCTL_GET_TREF_LIST = 39
 
-canCHANNELDATA_CHANNEL_CAP              = 1
-canCHANNELDATA_TRANS_CAP                = 2
-canCHANNELDATA_CHANNEL_FLAGS            = 3
-canCHANNELDATA_CARD_TYPE                = 4
-canCHANNELDATA_CARD_NUMBER              = 5
-canCHANNELDATA_CHAN_NO_ON_CARD          = 6
-canCHANNELDATA_CARD_SERIAL_NO           = 7
-canCHANNELDATA_TRANS_SERIAL_NO          = 8
-canCHANNELDATA_CARD_FIRMWARE_REV        = 9
-canCHANNELDATA_CARD_HARDWARE_REV        = 10
-canCHANNELDATA_CARD_UPC_NO              = 11
-canCHANNELDATA_TRANS_UPC_NO             = 12
-canCHANNELDATA_CHANNEL_NAME             = 13
-canCHANNELDATA_DLL_FILE_VERSION         = 14
-canCHANNELDATA_DLL_PRODUCT_VERSION      = 15
-canCHANNELDATA_DLL_FILETYPE             = 16
-canCHANNELDATA_TRANS_TYPE               = 17
+canCHANNELDATA_CHANNEL_CAP = 1
+canCHANNELDATA_TRANS_CAP = 2
+canCHANNELDATA_CHANNEL_FLAGS = 3
+canCHANNELDATA_CARD_TYPE = 4
+canCHANNELDATA_CARD_NUMBER = 5
+canCHANNELDATA_CHAN_NO_ON_CARD = 6
+canCHANNELDATA_CARD_SERIAL_NO = 7
+canCHANNELDATA_TRANS_SERIAL_NO = 8
+canCHANNELDATA_CARD_FIRMWARE_REV = 9
+canCHANNELDATA_CARD_HARDWARE_REV = 10
+canCHANNELDATA_CARD_UPC_NO = 11
+canCHANNELDATA_TRANS_UPC_NO = 12
+canCHANNELDATA_CHANNEL_NAME = 13
+canCHANNELDATA_DLL_FILE_VERSION = 14
+canCHANNELDATA_DLL_PRODUCT_VERSION = 15
+canCHANNELDATA_DLL_FILETYPE = 16
+canCHANNELDATA_TRANS_TYPE = 17
 canCHANNELDATA_DEVICE_PHYSICAL_POSITION = 18
-canCHANNELDATA_UI_NUMBER                = 19
-canCHANNELDATA_TIMESYNC_ENABLED         = 20
-canCHANNELDATA_DRIVER_FILE_VERSION      = 21
-canCHANNELDATA_DRIVER_PRODUCT_VERSION   = 22
-canCHANNELDATA_MFGNAME_UNICODE          = 23
-canCHANNELDATA_MFGNAME_ASCII            = 24
-canCHANNELDATA_DEVDESCR_UNICODE         = 25
-canCHANNELDATA_DEVDESCR_ASCII           = 26
-canCHANNELDATA_DRIVER_NAME              = 27
-canCHANNELDATA_CHANNEL_QUALITY          = 28
-canCHANNELDATA_ROUNDTRIP_TIME           = 29
-canCHANNELDATA_BUS_TYPE                 = 30
-canCHANNELDATA_DEVNAME_ASCII            = 31
-canCHANNELDATA_TIME_SINCE_LAST_SEEN     = 32
-canCHANNELDATA_REMOTE_OPERATIONAL_MODE  = 33
-canCHANNELDATA_REMOTE_PROFILE_NAME      = 34
+canCHANNELDATA_UI_NUMBER = 19
+canCHANNELDATA_TIMESYNC_ENABLED = 20
+canCHANNELDATA_DRIVER_FILE_VERSION = 21
+canCHANNELDATA_DRIVER_PRODUCT_VERSION = 22
+canCHANNELDATA_MFGNAME_UNICODE = 23
+canCHANNELDATA_MFGNAME_ASCII = 24
+canCHANNELDATA_DEVDESCR_UNICODE = 25
+canCHANNELDATA_DEVDESCR_ASCII = 26
+canCHANNELDATA_DRIVER_NAME = 27
+canCHANNELDATA_CHANNEL_QUALITY = 28
+canCHANNELDATA_ROUNDTRIP_TIME = 29
+canCHANNELDATA_BUS_TYPE = 30
+canCHANNELDATA_DEVNAME_ASCII = 31
+canCHANNELDATA_TIME_SINCE_LAST_SEEN = 32
+canCHANNELDATA_REMOTE_OPERATIONAL_MODE = 33
+canCHANNELDATA_REMOTE_PROFILE_NAME = 34
 
-canMSG_MASK                             = 0x00ff
-canMSG_RTR                              = 0x0001
-canMSG_STD                              = 0x0002
-canMSG_EXT                              = 0x0004
-canMSG_WAKEUP                           = 0x0008
-canMSG_NERR                             = 0x0010
-canMSG_ERROR_FRAME                      = 0x0020
-canMSG_TXACK                            = 0x0040
-canMSG_TXRQ                             = 0x0080
-canFDMSG_MASK                           = 0xff0000      
-canFDMSG_EDL                            = 0x010000      
-canFDMSG_BRS                            = 0x020000      
-canFDMSG_ESI                            = 0x040000 
-canMSGERR_MASK                          = 0xff00
-canMSGERR_HW_OVERRUN                    = 0x0200
-canMSGERR_SW_OVERRUN                    = 0x0400
-canMSGERR_STUFF                         = 0x0800
-canMSGERR_FORM                          = 0x1000
-canMSGERR_CRC                           = 0x2000
-canMSGERR_BIT0                          = 0x4000
-canMSGERR_BIT1                          = 0x8000
-canMSGERR_OVERRUN                       = 0x0600
-canMSGERR_BIT                           = 0xC000
-canMSGERR_BUSERR                        = 0xF800
+canMSG_MASK = 0x00ff
+canMSG_RTR = 0x0001
+canMSG_STD = 0x0002
+canMSG_EXT = 0x0004
+canMSG_WAKEUP = 0x0008
+canMSG_NERR = 0x0010
+canMSG_ERROR_FRAME = 0x0020
+canMSG_TXACK = 0x0040
+canMSG_TXRQ = 0x0080
+canFDMSG_MASK = 0xff0000
+canFDMSG_EDL = 0x010000
+canFDMSG_BRS = 0x020000
+canFDMSG_ESI = 0x040000
+canMSGERR_MASK = 0xff00
+canMSGERR_HW_OVERRUN = 0x0200
+canMSGERR_SW_OVERRUN = 0x0400
+canMSGERR_STUFF = 0x0800
+canMSGERR_FORM = 0x1000
+canMSGERR_CRC = 0x2000
+canMSGERR_BIT0 = 0x4000
+canMSGERR_BIT1 = 0x8000
+canMSGERR_OVERRUN = 0x0600
+canMSGERR_BIT = 0xC000
+canMSGERR_BUSERR = 0xF800
 
-canDRIVER_NORMAL                        = 4
-canDRIVER_SILENT                        = 1
-canDRIVER_SELFRECEPTION                 = 8
-canDRIVER_OFF                           = 0
+canDRIVER_NORMAL = 4
+canDRIVER_SILENT = 1
+canDRIVER_SELFRECEPTION = 8
+canDRIVER_OFF = 0
 
-kvEVENT_TYPE_KEY                        = 1
+kvEVENT_TYPE_KEY = 1
 
-kvSCRIPT_STOP_NORMAL                    = 0
-kvSCRIPT_STOP_FORCED                    = -9
+kvSCRIPT_STOP_NORMAL = 0
+kvSCRIPT_STOP_FORCED = -9
 
-kvDEVICE_MODE_INTERFACE                 = 0
-kvDEVICE_MODE_LOGGER                    = 1
+kvDEVICE_MODE_INTERFACE = 0
+kvDEVICE_MODE_LOGGER = 1
+
 
 class canError(Exception):
     def __init__(self, canlib, canERR):
@@ -163,7 +165,9 @@ class canError(Exception):
         return msg.value
 
     def __str__(self):
-        return "[canError] %s: %s (%d)" % (self.canlib.fn, self.__canGetErrorText(), self.canERR)
+        return "[canError] %s: %s (%d)" % (self.canlib.fn,
+                                           self.__canGetErrorText(),
+                                           self.canERR)
 
 
 class canNoMsg(Exception):
@@ -174,6 +178,13 @@ class canNoMsg(Exception):
     def __str__(self):
         return "No messages available"
 
+class canScriptFail(canError):
+    def __init__(self, canlib, canERR):
+        self.canlib = canlib
+        self.canERR = canERR
+
+    def __str__(self):
+        return "Script error"
 
 class canVersion(Structure):
     _fields_ = [
@@ -186,16 +197,17 @@ class canVersion(Structure):
 
 
 class bitrateSetting(object):
-    def __init__(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1, syncMode=0):
-        self.freq     = freq
-        self.tseg1    = tseg1
-        self.tseg2    = tseg2
-        self.sjw      = sjw
-        self.nosamp   = nosamp
+    def __init__(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
+                 syncMode=0):
+        self.freq = freq
+        self.tseg1 = tseg1
+        self.tseg2 = tseg2
+        self.sjw = sjw
+        self.nosamp = nosamp
         self.syncMode = syncMode
 
     def __str__(self):
-        txt  = "freq    : %8d\n" % self.freq
+        txt = "freq     : %8d\n" % self.freq
         txt += "tseg1   : %8d\n" % self.tseg1
         txt += "tseg2   : %8d\n" % self.tseg2
         txt += "sjw     : %8d\n" % self.sjw
@@ -204,9 +216,9 @@ class bitrateSetting(object):
         return txt
 
 
-#----------------------------------------------------------------------#
-# Canlib class                                                         #
-#----------------------------------------------------------------------#
+# -------------------
+# Canlib class
+# -------------------
 
 class canlib(object):
 
@@ -238,7 +250,8 @@ class canlib(object):
         self.dll.canGetNumberOfChannels.argtypes = [POINTER(c_int)]
         self.dll.canGetNumberOfChannels.errcheck = self._canErrorCheck
 
-        self.dll.canGetChannelData.argtypes = [c_int, c_int, POINTER(None), c_size_t]
+        self.dll.canGetChannelData.argtypes = [c_int, c_int, POINTER(None),
+                                               c_size_t]
         self.dll.canGetChannelData.errcheck = self._canErrorCheck
 
         self.dll.canOpenChannel.argtypes = [c_int, c_int]
@@ -251,18 +264,23 @@ class canlib(object):
                                              c_uint, c_uint, c_uint, c_uint]
         self.dll.canSetBusParams.errcheck = self._canErrorCheck
 
-        self.dll.canGetBusParams.argtypes = [c_int, POINTER(c_long), POINTER(c_uint),
+        self.dll.canGetBusParams.argtypes = [c_int, POINTER(c_long),
                                              POINTER(c_uint), POINTER(c_uint),
-                                             POINTER(c_uint), POINTER(c_uint)]
+                                             POINTER(c_uint), POINTER(c_uint),
+                                             POINTER(c_uint)]
         self.dll.canGetBusParams.errcheck = self._canErrorCheck
 
-        self.dll.canSetBusParamsFd.argtypes = [c_int, c_long, c_uint, c_uint, c_uint]
+        self.dll.canSetBusParamsFd.argtypes = [c_int, c_long, c_uint, c_uint,
+                                               c_uint]
         self.dll.canSetBusParamsFd.errcheck = self._canErrorCheck
 
-        self.dll.canGetBusParamsFd.argtypes = [c_int, POINTER(c_long), POINTER(c_uint),
-                                               POINTER(c_uint), POINTER(c_uint)]
+        self.dll.canGetBusParamsFd.argtypes = [c_int, POINTER(c_long),
+                                               POINTER(c_uint),
+                                               POINTER(c_uint),
+                                               POINTER(c_uint)]
         self.dll.canGetBusParamsFd.errcheck = self._canErrorCheck
-        self.dll.canFdSecondarySamplePoint.argtypes = [c_int, POINTER(c_uint), c_int]
+        self.dll.canFdSecondarySamplePoint.argtypes = [c_int, POINTER(c_uint),
+                                                       c_int]
         self.dll.canFdSecondarySamplePoint.errcheck = self._canErrorCheck
 
         self.dll.canBusOn.argtypes = [c_int]
@@ -279,10 +297,12 @@ class canlib(object):
                                               POINTER(c_uint)]
         self.dll.canTranslateBaud.errcheck = self._canErrorCheck
 
-        self.dll.canWrite.argtypes = [c_int, c_long, POINTER(None), c_uint, c_uint]
+        self.dll.canWrite.argtypes = [c_int, c_long, POINTER(None), c_uint,
+                                      c_uint]
         self.dll.canWrite.errcheck = self._canErrorCheck
 
-        self.dll.canWriteWait.argtypes = [c_int, c_long, POINTER(None), c_uint, c_uint, c_ulong]
+        self.dll.canWriteWait.argtypes = [c_int, c_long, POINTER(None), c_uint,
+                                          c_uint, c_ulong]
         self.dll.canWriteWait.errcheck = self._canErrorCheck
 
         self.dll.canReadWait.argtypes = [c_int, POINTER(c_long), POINTER(None),
@@ -291,18 +311,20 @@ class canlib(object):
         self.dll.canReadWait.errcheck = self._canErrorCheck
 
         try:
-            self.dll.canReadSpecificSkip.argtypes = [c_int, c_long, POINTER(None),
-                                                     POINTER(c_uint), POINTER(c_uint),
+            self.dll.canReadSpecificSkip.argtypes = [c_int, c_long,
+                                                     POINTER(None),
+                                                     POINTER(c_uint),
+                                                     POINTER(c_uint),
                                                      POINTER(c_ulong)]
             self.dll.canReadSpecificSkip.errcheck = self._canErrorCheck
-        except Exception, e:
-            print 'Info:', e, '(Not implemented in Linux)'
+        except Exception as e:
+            print('Info:', e, '(Not implemented in Linux)')
 
         try:
             self.dll.canReadSyncSpecific.argtypes = [c_int, c_long, c_ulong]
             self.dll.canReadSyncSpecific.errcheck = self._canErrorCheck
-        except Exception, e:
-            print 'Info:', e, '(Not implemented in Linux)'
+        except Exception as e:
+            print('Info:', e, '(Not implemented in Linux)')
 
         self.dll.canSetBusOutputControl.argtypes = [c_int, c_ulong]
         self.dll.canSetBusOutputControl.errcheck = self._canErrorCheck
@@ -311,19 +333,24 @@ class canlib(object):
         self.dll.canIoCtl.errcheck = self._canErrorCheck
 
         try:
-            self.dll.kvReadDeviceCustomerData.argtypes = [c_int, c_int, c_int, POINTER(None), c_size_t]
+            self.dll.kvReadDeviceCustomerData.argtypes = [c_int, c_int, c_int,
+                                                          POINTER(None),
+                                                          c_size_t]
             self.dll.kvReadDeviceCustomerData.errcheck = self._canErrorCheck
 
             self.dll.kvFileGetCount.argtypes = [c_int, POINTER(c_int)]
             self.dll.kvFileGetCount.errcheck = self._canErrorCheck
 
-            self.dll.kvFileGetName.argtypes = [c_int, c_int, c_char_p, c_int]
-            self.dll.kvFileGetName.errcheck =  self._canErrorCheck
+            self.dll.kvFileGetName.argtypes = [c_int, c_int, c_char_p,
+                                               c_int]
+            self.dll.kvFileGetName.errcheck = self._canErrorCheck
 
-            self.dll.kvFileCopyFromDevice.argtypes = [c_int, c_char_p, c_char_p]
-            self.dll.kvFileCopyFromDevice.errcheck =  self._canErrorCheck
+            self.dll.kvFileCopyFromDevice.argtypes = [c_int, c_char_p,
+                                                      c_char_p]
+            self.dll.kvFileCopyFromDevice.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptSendEvent.argtypes = [c_int, c_int, c_int, c_int, c_uint]
+            self.dll.kvScriptSendEvent.argtypes = [c_int, c_int, c_int, c_int,
+                                                   c_uint]
             self.dll.kvScriptSendEvent.errcheck = self._canErrorCheck
 
             self.dll.kvScriptStart.argtypes = [c_int, c_int]
@@ -335,21 +362,21 @@ class canlib(object):
             self.dll.kvScriptUnload.argtypes = [c_int, c_int]
             self.dll.kvScriptUnload.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptLoadFileOnDevice.argtypes = [c_int, c_int, c_char_p]
+            self.dll.kvScriptLoadFileOnDevice.argtypes = [c_int, c_int,
+                                                          c_char_p]
             self.dll.kvScriptLoadFileOnDevice.errcheck = self._canErrorCheck
 
             self.dll.kvScriptLoadFile.argtypes = [c_int, c_int, c_char_p]
             self.dll.kvScriptLoadFile.errcheck = self._canErrorCheck
 
-        except Exception, e:
-            print 'Info:', e, '(Not implemented in Linux)'
+            self.dll.kvDeviceSetMode.argtypes = [c_int, c_int]
+            self.dll.kvDeviceSetMode.errcheck = self._canErrorCheck
 
-        self.dll.kvDeviceSetMode.argtypes = [c_int, c_int]
-        self.dll.kvDeviceSetMode.errcheck = self._canErrorCheck
+            self.dll.kvDeviceGetMode.argtypes = [c_int, POINTER(c_int)]
+            self.dll.kvDeviceGetMode.errcheck = self._canErrorCheck
 
-        self.dll.kvDeviceGetMode.argtypes = [c_int, POINTER(c_int)]
-        self.dll.kvDeviceGetMode.errcheck = self._canErrorCheck
-
+        except Exception as e:
+            print('Info:', e, '(Not implemented in Linux)')
 
     def __del__(self):
         self.dll.canUnloadLibrary()
@@ -357,13 +384,11 @@ class canlib(object):
     def _canErrorCheck(self, result, func, arguments):
         if result == canERR_NOMSG:
             raise canNoMsg(self, result)
+        elif result == canERR_SCRIPT_FAIL:
+            raise canScriptFail(self, result)
         elif result < 0:
             raise canError(self, result)
         return result
-
-    #------------------------------------------------------------------#
-    # API                                                              #
-    #------------------------------------------------------------------#
 
     def getVersion(self):
         self.fn = inspect.stack()[0][3]
@@ -422,7 +447,6 @@ class canlib(object):
         (ean_lo, ean_hi) = struct.unpack('LL', buf)
         return "%04x-%x" % ((ean_lo >> 4) & 0xffff, ean_lo & 0xf)
 
-
     def getChannelData_Serial(self, channel):
         self.fn = inspect.stack()[0][3]
         buf_type = c_ulong * 2
@@ -442,7 +466,6 @@ class canlib(object):
                                    byref(name), sizeof(name))
         return name.value
 
-
     def getChannelData_Firmware(self, channel):
         self.fn = inspect.stack()[0][3]
         buf_type = c_ushort * 4
@@ -457,13 +480,14 @@ class canlib(object):
         self.fn = inspect.stack()[0][3]
         return canChannel(self, channel, flags)
 
-    def translateBaud(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1, syncMode=0):
-        self.fn    = inspect.stack()[0][3]
-        freq_p     = c_long(freq)
-        tseg1_p    = c_int(tseg1)
-        tseg2_p    = c_int(tseg2)
-        sjw_p      = c_int(sjw)
-        nosamp_p   = c_int(nosamp)
+    def translateBaud(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
+                      syncMode=0):
+        self.fn = inspect.stack()[0][3]
+        freq_p = c_long(freq)
+        tseg1_p = c_int(tseg1)
+        tseg2_p = c_int(tseg2)
+        sjw_p = c_int(sjw)
+        nosamp_p = c_int(nosamp)
         syncMode_p = c_int(syncMode)
         self.dll.canTranslateBaud(byref(freq_p),
                                   byref(tseg1_p),
@@ -471,8 +495,10 @@ class canlib(object):
                                   byref(sjw_p),
                                   byref(nosamp_p),
                                   byref(syncMode_p))
-        rateSetting = bitrateSetting(freq=freq_p.value, tseg1=tseg1_p.value, tseg2=tseg2_p.value,
-                                     sjw=sjw_p.value, nosamp=nosamp_p.value, syncMode=syncMode_p.value)
+        rateSetting = bitrateSetting(freq=freq_p.value, tseg1=tseg1_p.value,
+                                     tseg2=tseg2_p.value, sjw=sjw_p.value,
+                                     nosamp=nosamp_p.value,
+                                     syncMode=syncMode_p.value)
         return rateSetting
 
     def unloadLibrary(self):
@@ -486,18 +512,19 @@ class canlib(object):
 class canChannel(object):
 
     def __init__(self, canlib, channel, flags=0):
-        self.canlib    = canlib
-        self.dll       = canlib.dll
-        self.index     = channel
+        self.canlib = canlib
+        self.dll = canlib.dll
+        self.index = channel
         self.canlib.fn = 'openChannel'
-        self.handle    = self.dll.canOpenChannel(channel, flags)
+        self.handle = self.dll.canOpenChannel(channel, flags)
 
     def close(self):
         self.canlib.fn = inspect.stack()[0][3]
         self.dll.canClose(self.handle)
         self.handle = -1
 
-    def setBusParams(self, freq, tseg1=0, tseg2=0, sjw=0, noSamp=0, syncmode=0):
+    def setBusParams(self, freq, tseg1=0, tseg2=0, sjw=0, noSamp=0,
+                     syncmode=0):
         self.canlib.fn = inspect.stack()[0][3]
         self.dll.canSetBusParams(self.handle, freq, tseg1, tseg2, sjw,
                                  noSamp, syncmode)
@@ -513,7 +540,8 @@ class canChannel(object):
         self.dll.canGetBusParams(self.handle, byref(freq), byref(tseg1),
                                  byref(tseg2), byref(sjw), byref(noSamp),
                                  byref(syncmode))
-        return freq.value, tseg1.value, tseg2.value, sjw.value, noSamp.value, syncmode.value
+        return (freq.value, tseg1.value, tseg2.value, sjw.value, noSamp.value,
+                syncmode.value)
 
     def busOn(self):
         self.canlib.fn = inspect.stack()[0][3]
@@ -531,7 +559,8 @@ class canChannel(object):
     def writeWait(self, id, msg, flag=0, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
         data = (c_ubyte * len(msg))(*msg)
-        self.dll.canWriteWait(self.handle, id, byref(data), len(msg), flag, timeout)
+        self.dll.canWriteWait(self.handle, id, byref(data), len(msg), flag,
+                              timeout)
 
     def read(self, timeout=0):
         self.canlib.fn = inspect.stack()[0][3]
@@ -551,7 +580,8 @@ class canChannel(object):
         buf = buf_type()
         user = c_int(userNumber)
         item = c_int(itemNumber)
-        self.dll.kvReadDeviceCustomerData(self.handle, user, item, byref(buf), sizeof(buf))
+        self.dll.kvReadDeviceCustomerData(self.handle, user, item, byref(buf),
+                                          sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
     def readSpecificSkip(self, id, timeout=0):
@@ -571,10 +601,12 @@ class canChannel(object):
         id = c_long(id)
         self.dll.canReadSyncSpecific(self.handle, id, timeout)
 
-    def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY, eventNo=ord('a'), data=0):
+    def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY,
+                        eventNo=ord('a'), data=0):
         self.canlib.fn = inspect.stack()[0][3]
-        self.dll.kvScriptSendEvent(self.handle, c_int(slotNo), c_int(eventType),
-                                   c_int(eventNo), c_uint(data))
+        self.dll.kvScriptSendEvent(self.handle, c_int(slotNo),
+                                   c_int(eventType), c_int(eventNo),
+                                   c_uint(data))
 
     def setBusOutputControl(self, drivertype=canDRIVER_NORMAL):
         self.canlib.fn = inspect.stack()[0][3]
@@ -616,7 +648,7 @@ class canChannel(object):
         self.canlib.fn = inspect.stack()[0][3]
         self.dll.kvScriptStart(self.handle, slot)
 
-    def scriptStop(self, slot, mode):
+    def scriptStop(self, slot, mode=kvSCRIPT_STOP_NORMAL):
         self.canlib.fn = inspect.stack()[0][3]
         self.dll.kvScriptStop(self.handle, slot, mode)
 
@@ -626,7 +658,8 @@ class canChannel(object):
 
     def scriptLoadFileOnDevice(self, slot, localFile):
         self.canlib.fn = inspect.stack()[0][3]
-        self.dll.kvScriptLoadFileOnDevice(self.handle, slot, c_char_p(localFile))
+        self.dll.kvScriptLoadFileOnDevice(self.handle, slot,
+                                          c_char_p(localFile))
 
     def scriptLoadFile(self, slot, filePathOnPC):
         self.canlib.fn = inspect.stack()[0][3]
@@ -641,12 +674,14 @@ class canChannel(object):
     def fileGetName(self, fileNo):
         self.canlib.fn = inspect.stack()[0][3]
         fileName = create_string_buffer(50)
-        self.dll.kvFileGetName(self.handle, c_int(fileNo), fileName, sizeof(fileName))
+        self.dll.kvFileGetName(self.handle, c_int(fileNo), fileName,
+                               sizeof(fileName))
         return fileName.value
 
     def fileCopyFromDevice(self, deviceFileName, hostFileName):
         self.canlib.fn = inspect.stack()[0][3]
-        self.dll.kvFileCopyFromDevice(self.handle, deviceFileName, hostFileName)
+        self.dll.kvFileCopyFromDevice(self.handle, deviceFileName,
+                                      hostFileName)
 
     def kvDeviceSetMode(self, mode):
         self.canlib.fn = inspect.stack()[0][3]
@@ -662,46 +697,46 @@ if __name__ == '__main__':
     cl = canlib()
     channels = cl.getNumberOfChannels()
 
-    print "canlib version: %s" % cl.getVersion()
+    print("canlib version: %s" % cl.getVersion())
 
     if len(sys.argv) != 2:
-        print "Please enter channel, example: %s 3\n" % sys.argv[0]
+        print("Please enter channel, example: %s 3\n" % sys.argv[0])
         for ch in range(0, channels):
             try:
-                print "%d. %s (%s / %s)" % (ch, cl.getChannelData_Name(ch),
+                print("%d. %s (%s / %s)" % (ch, cl.getChannelData_Name(ch),
                                             cl.getChannelData_EAN(ch),
-                                            cl.getChannelData_Serial(ch))
+                                            cl.getChannelData_Serial(ch)))
             except (canError) as ex:
-                print ex
+                print(ex)
         sys.exit()
 
     ch = int(sys.argv[1])
     if ch >= channels:
-        print "Invalid channel number"
+        print("Invalid channel number")
         sys.exit()
 
     try:
         ch1 = cl.openChannel(ch, canOPEN_ACCEPT_VIRTUAL)
-        print "Using channel: %s, EAN: %s" % (ch1.getChannelData_Name(),
-                                              ch1.getChannelData_EAN())
+        print("Using channel: %s, EAN: %s" % (ch1.getChannelData_Name(),
+                                              ch1.getChannelData_EAN()))
 
         ch1.setBusOutputControl(canDRIVER_NORMAL)
         ch1.setBusParams(canBITRATE_1M)
         ch1.busOn()
     except (canError) as ex:
-        print ex
+        print(ex)
 
     while True:
         try:
             id, msg, dlc, flg, time = ch1.read()
-            print "%9d  %9d  0x%02x  %d  %s" % (id, time, flg, dlc, msg)
+            print("%9d  %9d  0x%02x  %d  %s" % (id, time, flg, dlc, msg))
             for i in range(dlc):
                 msg[i] = (msg[i]+1) % 256
             ch1.write(id, msg, flg)
         except (canNoMsg) as ex:
             None
         except (canError) as ex:
-            print ex
+            print(ex)
 
     ch1.busOff()
     ch1.close()
