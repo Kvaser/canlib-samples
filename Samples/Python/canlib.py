@@ -15,6 +15,7 @@ canERR_NOTFOUND = -3
 canERR_NOCHANNELS = -5
 canERR_TIMEOUT = -7
 canERR_INVHANDLE = -10
+canERR_TXBUFOFL = -13
 canERR_NOCARD = -26
 canERR_SCRIPT_FAIL = -39
 canERR_NOT_IMPLEMENTED = -32
@@ -158,6 +159,7 @@ class canError(Exception):
     def __init__(self, canlib, canERR):
         self.canlib = canlib
         self.canERR = canERR
+        self.fn = canlib.fn
 
     def __canGetErrorText(self):
         msg = create_string_buffer(80)
@@ -165,7 +167,7 @@ class canError(Exception):
         return msg.value
 
     def __str__(self):
-        return "[canError] %s: %s (%d)" % (self.canlib.fn,
+        return "[canError] %s: %s (%d)" % (self.fn,
                                            self.__canGetErrorText(),
                                            self.canERR)
 
@@ -391,19 +393,19 @@ class canlib(object):
         return result
 
     def getVersion(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         v = self.dll.canGetVersion()
         version = canVersion(v & 0xff, v >> 8)
         return version
 
     def getNumberOfChannels(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         chanCount = c_int()
         self.dll.canGetNumberOfChannels(chanCount)
         return chanCount.value
 
     def getChannelData_Name(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         name = create_string_buffer(80)
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_DEVDESCR_ASCII,
@@ -416,7 +418,7 @@ class canlib(object):
         return "%s (channel %d)" % (name.value, buf[0])
 
     def getChannelData_CardNumber(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_ulong
         buf = buf_type()
         self.dll.canGetChannelData(channel,
@@ -425,7 +427,7 @@ class canlib(object):
         return buf.value
 
     def getChannelData_EAN(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
@@ -438,7 +440,7 @@ class canlib(object):
                                       (ean_lo >> 4) & 0xfffff, ean_lo & 0xf)
 
     def getChannelData_EAN_short(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
@@ -448,7 +450,7 @@ class canlib(object):
         return "%04x-%x" % ((ean_lo >> 4) & 0xffff, ean_lo & 0xf)
 
     def getChannelData_Serial(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
@@ -459,7 +461,7 @@ class canlib(object):
         return serial_lo
 
     def getChannelData_DriverName(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         name = create_string_buffer(80)
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_DRIVER_NAME,
@@ -467,7 +469,7 @@ class canlib(object):
         return name.value
 
     def getChannelData_Firmware(self, channel):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_ushort * 4
         buf = buf_type()
         self.dll.canGetChannelData(channel,
@@ -477,12 +479,12 @@ class canlib(object):
         return (major, minor, build)
 
     def openChannel(self, channel, flags=0):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         return canChannel(self, channel, flags)
 
     def translateBaud(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
                       syncMode=0):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         freq_p = c_long(freq)
         tseg1_p = c_int(tseg1)
         tseg2_p = c_int(tseg2)
@@ -519,18 +521,18 @@ class canChannel(object):
         self.handle = self.dll.canOpenChannel(channel, flags)
 
     def close(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canClose(self.handle)
         self.handle = -1
 
     def setBusParams(self, freq, tseg1=0, tseg2=0, sjw=0, noSamp=0,
                      syncmode=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canSetBusParams(self.handle, freq, tseg1, tseg2, sjw,
                                  noSamp, syncmode)
 
     def getBusParams(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         freq = c_long()
         tseg1 = c_uint()
         tseg2 = c_uint()
@@ -544,28 +546,28 @@ class canChannel(object):
                 syncmode.value)
 
     def busOn(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canBusOn(self.handle)
 
     def busOff(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canBusOff(self.handle)
 
     # The variable name id (as used by canlib) is a built-in function in Python,
     # so we use the name id_ instead
     def write(self, id_, msg, flag=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         data = (c_ubyte * len(msg))(*msg)
         self.dll.canWrite(self.handle, id_, byref(data), len(msg), flag)
 
     def writeWait(self, id_, msg, flag=0, timeout=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         data = (c_ubyte * len(msg))(*msg)
         self.dll.canWriteWait(self.handle, id_, byref(data), len(msg), flag,
                               timeout)
 
     def read(self, timeout=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         msg = self.canlib.canMessage()
         id_ = c_long()
         dlc = c_uint()
@@ -577,7 +579,7 @@ class canChannel(object):
         return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf_type = c_uint8 * 8
         buf = buf_type()
         user = c_int(userNumber)
@@ -587,7 +589,7 @@ class canChannel(object):
         return struct.unpack('!Q', buf)[0]
 
     def readSpecificSkip(self, id_, timeout=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         msg = self.canlib.canMessage()
         id_ = c_long(id_)
         dlc = c_uint()
@@ -599,98 +601,98 @@ class canChannel(object):
         return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
 
     def readSyncSpecific(self, id_, timeout=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         id_ = c_long(id_)
         self.dll.canReadSyncSpecific(self.handle, id_, timeout)
 
     def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY,
                         eventNo=ord('a'), data=0):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptSendEvent(self.handle, c_int(slotNo),
                                    c_int(eventType), c_int(eventNo),
                                    c_uint(data))
 
     def setBusOutputControl(self, drivertype=canDRIVER_NORMAL):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canSetBusOutputControl(self.handle, drivertype)
 
     def ioCtl_flush_rx_buffer(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canIoCtl(self.handle, canIOCTL_FLUSH_RX_BUFFER, None, 0)
 
     def getChannelData_Name(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Name(self.index)
 
     def getChannelData_CardNumber(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_CardNumber(self.index)
 
     def getChannelData_EAN(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_EAN(self.index)
 
     def getChannelData_EAN_short(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_EAN_short(self.index)
 
     def getChannelData_Serial(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Serial(self.index)
 
     def getChannelData_DriverName(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_DriverName(self.index)
 
     def getChannelData_Firmware(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Firmware(self.index)
 
     def scriptStart(self, slot):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptStart(self.handle, slot)
 
     def scriptStop(self, slot, mode=kvSCRIPT_STOP_NORMAL):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptStop(self.handle, slot, mode)
 
     def scriptUnload(self, slot):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptUnload(self.handle, slot)
 
     def scriptLoadFileOnDevice(self, slot, localFile):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptLoadFileOnDevice(self.handle, slot,
                                           c_char_p(localFile))
 
     def scriptLoadFile(self, slot, filePathOnPC):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptLoadFile(self.handle, slot, c_char_p(filePathOnPC))
 
     def fileGetCount(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         count = c_int()
         self.dll.kvFileGetCount(self.handle, byref(count))
         return count.value
 
     def fileGetName(self, fileNo):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         fileName = create_string_buffer(50)
         self.dll.kvFileGetName(self.handle, c_int(fileNo), fileName,
                                sizeof(fileName))
         return fileName.value
 
     def fileCopyFromDevice(self, deviceFileName, hostFileName):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvFileCopyFromDevice(self.handle, deviceFileName,
                                       hostFileName)
 
     def kvDeviceSetMode(self, mode):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvDeviceSetMode(self.handle, c_int(mode))
 
     def kvDeviceGetMode(self):
-        self.canlib.fn = inspect.stack()[0][3]
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         mode = c_int()
         self.dll.kvDeviceGetMode(self.handle, byref(mode))
         return mode.value
