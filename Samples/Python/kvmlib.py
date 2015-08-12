@@ -475,7 +475,7 @@ class kvmlib(object):
         self.deviceOpen(memoNr, devicetype)
 
     def deviceOpen(self, memoNr=0, devicetype=kvmDEVICE_MHYDRA):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         status_p = c_int()
         self.handle = self.dll.kvmDeviceOpen(c_int32(memoNr), byref(status_p),
                                              c_int(devicetype))
@@ -490,7 +490,7 @@ class kvmlib(object):
         self.deviceMountKmf()
 
     def deviceMountKmf(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         status = c_int()
         status = self.dll.kvmDeviceMountKmf(c_int32(self.handle))
 
@@ -562,7 +562,7 @@ class kvmlib(object):
         self.logFileGetCount()
 
     def logFileGetCount(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         fileCount = c_uint32()
         self.dll.kvmLogFileGetCount(c_int32(self.handle), byref(fileCount))
         return fileCount.value
@@ -572,7 +572,7 @@ class kvmlib(object):
         self.deviceGetSerialNumber()
 
     def deviceGetSerialNumber(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         serial = c_uint()
         self.dll.kvmDeviceGetSerialNumber(c_int32(self.handle), byref(serial))
         return serial.value
@@ -582,7 +582,7 @@ class kvmlib(object):
         self.logFileDismount()
 
     def logFileDismount(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         self.dll.kvmLogFileDismount(c_int32(self.handle))
         self.logFileIndex = None
         self.eventCount = 0
@@ -594,7 +594,7 @@ class kvmlib(object):
     def logFileMount(self, fileIndx):
         if self.logFileIndex is not None:
             self.logFileDismount
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         eventCount = c_uint32()
         self.dll.kvmLogFileMount(c_int32(self.handle), c_uint32(fileIndx),
                                  byref(eventCount))
@@ -608,7 +608,7 @@ class kvmlib(object):
         self.logFileReadEvent()
 
     def logFileReadEvent(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         logevent = memoLogEventEx()
         try:
             self.dll.kvmLogFileReadEvent(c_int32(self.handle), byref(logevent))
@@ -626,7 +626,7 @@ class kvmlib(object):
         self.logFileReadEvents()
 
     def logFileReadEvents(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         while True:
             event = self.logFileReadEvent()
             if event is None:
@@ -639,7 +639,7 @@ class kvmlib(object):
         self.kmfValidate(fix)
 
     def kmfValidate(self, fix=0):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         self.dll.kvmKmfValidate(c_int32(self.handle))
 
     def writeConfigLif(self, lifData):
@@ -647,7 +647,7 @@ class kvmlib(object):
         self.kmfWriteConfig(lifData)
 
     def kmfWriteConfig(self, lifData):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         buf = create_string_buffer(lifData)
         self.dll.kvmKmfWriteConfig(c_int32(self.handle), byref(buf),
                                    len(lifData))
@@ -660,7 +660,7 @@ class kvmlib(object):
         self.deviceFormatDisk(reserveSpace, dbaseSpace, fat32)
 
     def deviceFormatDisk(self, reserveSpace=10, dbaseSpace=2, fat32=True):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         return self.dll.kvmDeviceFormatDisk(c_int32(self.handle), c_int(fat32),
                                             c_uint32(reserveSpace),
                                             c_uint32(dbaseSpace))
@@ -670,12 +670,12 @@ class kvmlib(object):
         self.close()
 
     def close(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         self.dll.kvmClose(c_int32(self.handle))
         self.handle = None
 
     def kmeOpenFile(self, filename, filetype=kvmFILE_KME40):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         if self.kmeHandle is not None:
             self.kmeCloseFile()
         status_p = c_int32()
@@ -687,13 +687,13 @@ class kvmlib(object):
             raise kvmError(self, status_p.value)
 
     def kmeCountEvents(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         eventCount = c_uint32(0)
         self.dll.kvmKmeCountEvents(c_int32(self.kmeHandle), byref(eventCount))
         return eventCount.value
 
     def kmeCloseFile(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         self.dll.kvmKmeCloseFile(c_int32(self.kmeHandle))
         self.kmeHandle = None
 

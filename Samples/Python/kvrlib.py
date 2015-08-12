@@ -487,7 +487,7 @@ class kvrlib(object):
         return handle
 
     def _configOpenEx(self, channel, mode, password, profile_no):
-        self.fn = 'configOpen'
+        self.fn = 'configOpenEx'
         handle = c_int32(-1)
         self.dll.kvrConfigOpenEx(c_int32(channel), c_int32(mode),
                                  c_char_p(password), handle, profile_no)
@@ -501,7 +501,7 @@ class kvrlib(object):
         return result
 
     def getVersion(self):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         return self.dll.kvrGetVersion()
 
 

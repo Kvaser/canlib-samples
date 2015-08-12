@@ -99,7 +99,7 @@ class kvaMemoLibXml(object):
         return result
 
     def kvaBufferToXml(self, conf_lif):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         version = c_long(0)
         total_size = 500*1024
         xml_size = c_uint(total_size)
@@ -110,7 +110,7 @@ class kvaMemoLibXml(object):
         return xml_buf.value
 
     def kvaXmlToBuffer(self, conf_xml):
-        self.fn = inspect.stack()[0][3]
+        self.fn = inspect.currentframe().f_code.co_name
         version = c_long(0)
         total_size = 500*1024
         lif_size = c_uint(total_size)
