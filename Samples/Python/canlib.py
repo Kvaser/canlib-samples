@@ -154,6 +154,11 @@ kvSCRIPT_STOP_FORCED = -9
 kvDEVICE_MODE_INTERFACE = 0
 kvDEVICE_MODE_LOGGER = 1
 
+ENVVAR_MAX_SIZE = 4096
+
+kvENVVAR_TYPE_INT = 1
+kvENVVAR_TYPE_FLOAT = 2
+kvENVVAR_TYPE_STRING = 3
 
 class canError(Exception):
     def __init__(self, canlib, canERR):
@@ -172,7 +177,7 @@ class canError(Exception):
                                            self.canERR)
 
 
-class canNoMsg(Exception):
+class canNoMsg(canError):
     def __init__(self, canlib, canERR):
         self.canlib = canlib
         self.canERR = canERR
@@ -187,6 +192,27 @@ class canScriptFail(canError):
 
     def __str__(self):
         return "Script error"
+
+
+class EnvvarException(Exception):
+    pass
+
+
+class EnvvarValueError(EnvvarException):
+    def __init__(self, envvar, type_, value):
+        msg = "invalid literal for envvar ({envvar}) with type {type_}: {value}"
+        msg.format(envvar = envvar,
+                   type_ = type_,
+                   value = value)
+        super(EnvvarValueError, self).__init__(message)
+
+
+class EnvvarNameError(EnvvarException):
+    def __init__(self, envvar):
+        msg = "envvar names must not start with an underscore: {envvar}"
+        msg.format(envvar = envvar)
+        super(EnvvarValueError, self).__init__(message)
+
 
 class canVersion(Structure):
     _fields_ = [
@@ -364,6 +390,31 @@ class canlib(object):
             self.dll.kvScriptUnload.argtypes = [c_int, c_int]
             self.dll.kvScriptUnload.errcheck = self._canErrorCheck
 
+            self.dll.kvScriptEnvvarOpen.argtypes = [c_int, c_char_p,
+                                                    POINTER(c_int), POINTER(c_int)]
+            self.dll.kvScriptEnvvarOpen.restype = c_int64
+            self.dll.kvScriptEnvvarOpen.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarClose.argtypes = [c_int64]
+            self.dll.kvScriptEnvvarClose.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarSetInt.argtypes = [c_int64, c_int]
+            self.dll.kvScriptEnvvarSetInt.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarGetInt.argtypes = [c_int64, POINTER(c_int)]
+            self.dll.kvScriptEnvvarGetInt.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarSetFloat.argtypes = [c_int64, c_float]
+            self.dll.kvScriptEnvvarSetFloat.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarGetFloat.argtypes = [c_int64, POINTER(c_float)]
+            self.dll.kvScriptEnvvarGetFloat.errcheck = self._canErrorCheck
+
+            self.dll.kvScriptEnvvarSetData.argtypes = [c_int64, c_void_p, c_int, c_int]
+            self.dll.kvScriptEnvvarSetData.errcheck = self._canErrorCheck
+            self.dll.kvScriptEnvvarGetData.argtypes = [c_int64, c_void_p, c_int, c_int]
+            self.dll.kvScriptEnvvarGetData.errcheck = self._canErrorCheck
+
             self.dll.kvScriptLoadFileOnDevice.argtypes = [c_int, c_int,
                                                           c_char_p]
             self.dll.kvScriptLoadFileOnDevice.errcheck = self._canErrorCheck
@@ -519,6 +570,7 @@ class canChannel(object):
         self.index = channel
         self.canlib.fn = 'openChannel'
         self.handle = self.dll.canOpenChannel(channel, flags)
+        self.envvar = envvar(self)
 
     def close(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
@@ -669,6 +721,42 @@ class canChannel(object):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptLoadFile(self.handle, slot, c_char_p(filePathOnPC))
 
+    def scriptEnvvarOpen(self, name):
+        envvarType = c_int()
+        envvarSize = c_int()
+        envHandle = self.dll.kvScriptEnvvarOpen(self.handle, c_char_p(name), byref(envvarType),
+                                    byref(envvarSize))
+        return envHandle, envvarType.value, envvarSize.value
+
+    def scriptEnvvarClose(self, envHandle):
+        self.dll.kvScriptEnvvarClose(c_int64(envHandle))
+
+    def scriptEnvvarSetInt(self, envHandle, value):
+        value = int(value)
+        self.dll.kvScriptEnvvarSetInt(c_int64(envHandle), c_int(value))
+
+    def scriptEnvvarGetInt(self, envHandle):
+        envvarValue = c_int()
+        self.dll.kvScriptEnvvarGetInt(c_int64(envHandle), byref(envvarValue))
+        return envvarValue.value
+
+    def scriptEnvvarSetFloat(self, envHandle, value):
+        value = float(value)
+        self.dll.kvScriptEnvvarSetFloat(c_int64(envHandle), c_float(value))
+
+    def scriptEnvvarGetFloat(self, envHandle):
+        envvarValue = c_float()
+        self.dll.kvScriptEnvvarGetFloat(c_int64(envHandle), byref(envvarValue))
+        return envvarValue.value
+
+    def scriptEnvvarSetData(self, envHandle, value, envSize):
+        self.dll.kvScriptEnvvarSetData(c_int64(envHandle), c_char_p(value), 0, c_int(envSize))
+
+    def scriptEnvvarGetData(self, envHandle, envSize):
+        envvarValue = create_string_buffer(envSize)
+        self.dll.kvScriptEnvvarGetData(c_int64(envHandle), byref(envvarValue), 0, c_int(envSize))
+        return envvarValue.value
+
     def fileGetCount(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         count = c_int()
@@ -696,6 +784,54 @@ class canChannel(object):
         mode = c_int()
         self.dll.kvDeviceGetMode(self.handle, byref(mode))
         return mode.value
+
+
+class envvar(object):
+    class Attrib(object):
+        def __init__(self, handle=None, type_=None, size=None):
+            self.handle = handle
+            self.type_ = type_
+            self.size = size
+
+    def __init__(self, channel):
+        self.__dict__['_channel'] = channel
+        self.__dict__['_attrib'] = {}
+
+    def _ensure_open(self, name):
+        assert not name.startswith('_'), ("envvar names must not start with an underscore: %s" % name)
+
+        if name not in self.__dict__['_attrib']: # We just check the handle here
+            self._attrib[name] = envvar.Attrib(*self._channel.scriptEnvvarOpen(name))
+
+
+    def __getattr__(self, name):
+        self._ensure_open(name)
+        if self._attrib[name].type_ == kvENVVAR_TYPE_INT:
+            value = self._channel.scriptEnvvarGetInt(self._attrib[name].handle)
+        elif self._attrib[name].type_ == kvENVVAR_TYPE_FLOAT:
+            value = self._channel.scriptEnvvarGetFloat(self._attrib[name].handle)
+        elif self._attrib[name].type_ == kvENVVAR_TYPE_STRING:
+            value = self._channel.scriptEnvvarGetData(self._attrib[name].handle, self._attrib[name].size)
+        else:
+            msg = "getting is not implemented for type {type_}"
+            msg = msg.format(type_=self._attrib[name].type_)
+            raise TypeError(msg)
+        return value
+
+    def __setattr__(self, name, value):
+        self._ensure_open(name)
+        if self._attrib[name].type_ == kvENVVAR_TYPE_INT:
+            value = self._channel.scriptEnvvarSetInt(self._attrib[name].handle, value)
+        elif self._attrib[name].type_ == kvENVVAR_TYPE_FLOAT:
+            value = self._channel.scriptEnvvarSetFloat(self._attrib[name].handle, value)
+        elif self._attrib[name].type_ == kvENVVAR_TYPE_STRING:
+            value = str(value)
+            value = self._channel.scriptEnvvarSetData(self._attrib[name].handle, value, self._attrib[name].size)
+        else:
+            msg = "setting is not implemented for type {type_}"
+            msg = msg.format(type_=self._attrib[name].type_)
+            raise TypeError(msg)
+
 
 if __name__ == '__main__':
     cl = canlib()

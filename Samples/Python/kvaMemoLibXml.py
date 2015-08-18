@@ -72,9 +72,12 @@ class kvaMemoLibXml(object):
             installDir = "."
         else:
             raise Exception("ERROR: Expected to find kvamemolibxml.dll at %s, set KVDLLPATH" % installDir)
-
-    libxml2Dll = WinDLL(os.path.join(installDir, 'libxml2.dll'))
-    kvaMemoLibXmlDll = WinDLL(os.path.join(installDir, 'kvamemolibxml.dll'))
+    try:
+        libxml2Dll = WinDLL(os.path.join(installDir, 'libxml2.dll'))
+        kvaMemoLibXmlDll = WinDLL(os.path.join(installDir, 'kvamemolibxml.dll'))
+    except Exception as e:
+        print("Error loading dll from directory %s." % installDir)
+        print e
 
     def __init__(self):
         self.dll = kvaMemoLibXml.kvaMemoLibXmlDll

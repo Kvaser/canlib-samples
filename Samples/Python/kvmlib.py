@@ -371,10 +371,13 @@ class kvmlib(object):
             installDir = "."
         else:
             raise Exception("ERROR: Expected to find kvmlib.dll at %s, set KVDLLPATH" % installDir)
-
-    kvaMemolibDll0600 = WinDLL(os.path.join(installDir, 'kvaMemoLib0600.dll'))
-    kvaMemolibDll = WinDLL(os.path.join(installDir, 'kvaMemoLib.dll'))
-    kvmlibDll = WinDLL(os.path.join(installDir, 'kvmlib.dll'))
+    try:
+        kvaMemolibDll0600 = WinDLL(os.path.join(installDir, 'kvaMemoLib0600.dll'))
+        kvaMemolibDll = WinDLL(os.path.join(installDir, 'kvaMemoLib.dll'))
+        kvmlibDll = WinDLL(os.path.join(installDir, 'kvmlib.dll'))
+    except Exception as e:
+        print("Error loading dll from directory %s." % installDir)
+        print e
 
     def __init__(self):
         self.handle = None
