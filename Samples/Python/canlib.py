@@ -346,13 +346,13 @@ class canlib(object):
                                                      POINTER(c_ulong)]
             self.dll.canReadSpecificSkip.errcheck = self._canErrorCheck
         except Exception as e:
-            print('Info:', e, '(Not implemented in Linux)')
+            logging.debug(str(e) + ' (Not implemented in Linux)')
 
         try:
             self.dll.canReadSyncSpecific.argtypes = [c_int, c_long, c_ulong]
             self.dll.canReadSyncSpecific.errcheck = self._canErrorCheck
         except Exception as e:
-            print('Info:', e, '(Not implemented in Linux)')
+            logging.debug(str(e) + ' (Not implemented in Linux)') 
 
         self.dll.canSetBusOutputControl.argtypes = [c_int, c_ulong]
         self.dll.canSetBusOutputControl.errcheck = self._canErrorCheck
@@ -429,7 +429,7 @@ class canlib(object):
             self.dll.kvDeviceGetMode.errcheck = self._canErrorCheck
 
         except Exception as e:
-            print('Info:', e, '(Not implemented in Linux)')
+            logging.debug(str(e) + ' (Not implemented in Linux)')
 
     def __del__(self):
         self.dll.canUnloadLibrary()
