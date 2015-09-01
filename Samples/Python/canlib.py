@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from ctypes import *
 import sys
 import struct
