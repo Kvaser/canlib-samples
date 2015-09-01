@@ -673,6 +673,11 @@ class canChannel(object):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canIoCtl(self.handle, canIOCTL_FLUSH_RX_BUFFER, None, 0)
 
+    def ioCtl_set_timer_scale(self, scale):
+        self.canlib.fn = 'ioCtl_set_timer_scale'
+        scale = c_long(scale)
+        self.dll.canIoCtl(self.handle, canIOCTL_SET_TIMER_SCALE, byref(scale), 4)
+
     def getChannelData_Name(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Name(self.index)
