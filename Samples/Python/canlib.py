@@ -641,25 +641,23 @@ class canChannel(object):
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_uint8 * 8
-        buf = buf_type()
+        buf = create_string_buffer(8)
         user = c_int(userNumber)
         item = c_int(itemNumber)
-        self.dll.kvReadDeviceCustomerData(self.handle, user, item, byref(buf),
+        self.dll.kvReadDeviceCustomerData(self.handle, user, item, buf,
                                           sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
     def readSpecificSkip(self, id_, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        msg = self.canlib.canMessage()
+        msg = create_string_buf(8)
         id_ = c_long(id_)
         dlc = c_uint()
         flag = c_uint()
-        time = c_ulong(timeout)
-        self.dll.canReadSpecificSkip(self.handle, id_, byref(msg), byref(dlc),
-                                     byref(flag), byref(time))
-        msgList = [msg[i] for i in range(len(msg))]
-        return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
+        time = c_ulong(timeout)  # Is this really right? 
+        self.dll.canReadSpecificSkip(self.handle, id_, msg, dlc, flag, time)
+        # Why is id_ returned here? It is a constant.
+        return id_.value, msg[:dlc.value], dlc.value, flag.value, time.value
 
     def readSyncSpecific(self, id_, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
