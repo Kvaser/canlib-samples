@@ -279,7 +279,7 @@ class canlib(object):
         self.dll.canGetNumberOfChannels.argtypes = [POINTER(c_int)]
         self.dll.canGetNumberOfChannels.errcheck = self._canErrorCheck
 
-        self.dll.canGetChannelData.argtypes = [c_int, c_int, POINTER(None),
+        self.dll.canGetChannelData.argtypes = [c_int, c_int, c_void_p,
                                                c_size_t]
         self.dll.canGetChannelData.errcheck = self._canErrorCheck
 
@@ -326,22 +326,22 @@ class canlib(object):
                                               POINTER(c_uint)]
         self.dll.canTranslateBaud.errcheck = self._canErrorCheck
 
-        self.dll.canWrite.argtypes = [c_int, c_long, POINTER(None), c_uint,
+        self.dll.canWrite.argtypes = [c_int, c_long, c_void_p, c_uint,
                                       c_uint]
         self.dll.canWrite.errcheck = self._canErrorCheck
 
-        self.dll.canWriteWait.argtypes = [c_int, c_long, POINTER(None), c_uint,
+        self.dll.canWriteWait.argtypes = [c_int, c_long, c_void_p, c_uint,
                                           c_uint, c_ulong]
         self.dll.canWriteWait.errcheck = self._canErrorCheck
 
-        self.dll.canReadWait.argtypes = [c_int, POINTER(c_long), POINTER(None),
+        self.dll.canReadWait.argtypes = [c_int, POINTER(c_long), c_void_p,
                                          POINTER(c_uint), POINTER(c_uint),
                                          POINTER(c_ulong), c_ulong]
         self.dll.canReadWait.errcheck = self._canErrorCheck
 
         try:
             self.dll.canReadSpecificSkip.argtypes = [c_int, c_long,
-                                                     POINTER(None),
+                                                     c_void_p,
                                                      POINTER(c_uint),
                                                      POINTER(c_uint),
                                                      POINTER(c_ulong)]
@@ -353,17 +353,17 @@ class canlib(object):
             self.dll.canReadSyncSpecific.argtypes = [c_int, c_long, c_ulong]
             self.dll.canReadSyncSpecific.errcheck = self._canErrorCheck
         except Exception as e:
-            logging.debug(str(e) + ' (Not implemented in Linux)') 
+            logging.debug(str(e) + ' (Not implemented in Linux)')
 
         self.dll.canSetBusOutputControl.argtypes = [c_int, c_ulong]
         self.dll.canSetBusOutputControl.errcheck = self._canErrorCheck
 
-        self.dll.canIoCtl.argtypes = [c_int, c_uint, POINTER(None), c_uint]
+        self.dll.canIoCtl.argtypes = [c_int, c_uint, c_void_p, c_uint]
         self.dll.canIoCtl.errcheck = self._canErrorCheck
 
         try:
             self.dll.kvReadDeviceCustomerData.argtypes = [c_int, c_int, c_int,
-                                                          POINTER(None),
+                                                          c_void_p,
                                                           c_size_t]
             self.dll.kvReadDeviceCustomerData.errcheck = self._canErrorCheck
 
