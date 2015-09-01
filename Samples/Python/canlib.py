@@ -678,6 +678,17 @@ class canChannel(object):
         scale = c_long(scale)
         self.dll.canIoCtl(self.handle, canIOCTL_SET_TIMER_SCALE, byref(scale), 4)
 
+    def getChannelData(self):
+        self.canlib.fn = 'getChannelData'
+        return (
+            self.canlib.getChannelData_Name(self.index),
+            self.canlib.getChannelData_CardNumber(self.index),
+            self.canlib.getChannelData_EAN(self.index),
+            self.canlib.getChannelData_EAN_short(self.index),
+            self.canlib.getChannelData_Serial(self.index),
+            self.canlib.getChannelData_DriverName(self.index),
+            self.canlib.getChannelData_Firmware(self.index))
+
     def getChannelData_Name(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Name(self.index)
