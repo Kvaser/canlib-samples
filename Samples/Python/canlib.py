@@ -610,10 +610,20 @@ class canChannel(object):
     # so we use the name id_ instead
     def write(self, id_, msg, flag=0):
         self.canlib.fn = 'write'
+        if not isinstance(msg, (bytes, str)):
+            if not isinstance(msg, bytearray):
+                msg = bytearray(msg)
+            msg = bytes(msg)
+
         self.dll.canWrite(self.handle, id_, msg, len(msg), flag)
 
     def writeWait(self, id_, msg, flag=0, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
+        if not isinstance(msg, (bytes, str)):
+            if not isinstance(msg, bytearray):
+                msg = bytearray(msg)
+            msg = bytes(msg)
+
         self.dll.canWriteWait(self.handle, id_, msg, len(msg), flag, timeout)
 
     def read(self, timeout=0):
@@ -637,7 +647,7 @@ class canChannel(object):
         flag = c_uint()
         time = c_ulong()
         self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout)
-        return id_.value, msg[:dlc.value], dlc.value, flag.value, time.value
+        return id_.value, bytearray(msg.raw[:dlc.value]), dlc.value, flag.value, time.value
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
