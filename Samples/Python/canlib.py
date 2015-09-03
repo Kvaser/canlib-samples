@@ -629,24 +629,24 @@ class canChannel(object):
 
         self.dll.canWrite(self.handle, id_, msg, len(msg), flag)
 
-    def writeWait(self, id_, msg, flag=0, timeout_ms=0):
+    def writeWait(self, id_, msg, flag=0, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         if not isinstance(msg, (bytes, str)):
             if not isinstance(msg, bytearray):
                 msg = bytearray(msg)
             msg = bytes(msg)
 
-        self.dll.canWriteWait(self.handle, id_, msg, len(msg), flag, timeout_ms)
+        self.dll.canWriteWait(self.handle, id_, msg, len(msg), flag, timeout)
 
-    def read(self, timeout_ms=0):
+    def read(self, timeout=0):
         """Read a CAN message and metadata.
 
         Reads a message from the receive buffer. If no message is available,
         the function waits until a message arrives or a timeout occurs.
 
         Args:
-            timeout_ms (int): Timeout in milliseconds, -1 gives an infinite
-                              timeout.
+            timeout (int): Timeout in milliseconds, -1 gives an infinite
+                           timeout.
 
         Returns:
             id_ (int):    CAN identifier
@@ -664,7 +664,7 @@ class canChannel(object):
         dlc = ct.c_uint()
         flag = ct.c_uint()
         time = ct.c_ulong()
-        self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout_ms)
+        self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout)
         length = min(_MAX_SIZE, dlc.value)
         return(id_.value, bytearray(msg.raw[:length]), dlc.value, flag.value,
                time.value)
@@ -678,7 +678,7 @@ class canChannel(object):
                                           ct.sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
-    def readSpecificSkip(self, id_, timeout_ms=0):
+    def readSpecificSkip(self, id_):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         # msg will be replaced by class when CAN FD is supported
         _MAX_SIZE = 8
@@ -686,16 +686,16 @@ class canChannel(object):
         id_ = ct.c_long(id_)
         dlc = ct.c_uint()
         flag = ct.c_uint()
-        time = ct.c_ulong(timeout_ms)
+        time = ct.c_ulong()
         self.dll.canReadSpecificSkip(self.handle, id_, msg, dlc, flag, time)
         length = min(_MAX_SIZE, dlc.value)
         return(id_.value, bytearray(msg.raw[:length]), dlc.value, flag.value,
                time.value)
 
-    def readSyncSpecific(self, id_, timeout_ms=0):
+    def readSyncSpecific(self, id_, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         id_ = ct.c_long(id_)
-        self.dll.canReadSyncSpecific(self.handle, id_, timeout_ms)
+        self.dll.canReadSyncSpecific(self.handle, id_, timeout)
 
     def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY,
                         eventNo=ord('a'), data=0):
