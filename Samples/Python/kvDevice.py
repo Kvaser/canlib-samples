@@ -160,7 +160,8 @@ class kvDevice():
     def setModeVirtualLogger(self):
         self.channel.kvDeviceSetMode(canlib.kvDEVICE_MODE_LOGGER)
         if self.channel.kvDeviceGetMode() != canlib.kvDEVICE_MODE_LOGGER:
-            raise Exception("ERROR: Could not set device in virtual logger mode. Is CAN power applied?.")
+            raise Exception("ERROR: Could not set device in virtual logger"
+                            " mode. Is CAN power applied?.")
 
     def setModeNormal(self):
         self.channel.kvDeviceSetMode(canlib.kvDEVICE_MODE_INTERFACE)
@@ -196,7 +197,8 @@ class kvDevice():
                     (time.time() - startTime) > timeout):
                 break
         if self.channel is None:
-            raise Exception('ERROR: Could not find device %s %s (timeout: %d s).' % (self._ean, self._serial, timeout))
+            raise Exception("ERROR: Could not find device %s %s (timeout: %d"
+                            " s)." % (self._ean, self._serial, timeout))
 
     def _findChannel(self, wanted_ean, wanted_serial=None):
         channel = None
@@ -222,7 +224,10 @@ class kvDevice():
         print('Wait for disappear', end="")
         while self._findChannel(self._ean, self._serial) is not None:
             if time.time() - startTime > timeout:
-                print('\nWARNING: Timeout (%s s) reached while waiting for device (ean:%s, sn:%s) to disappear!' % (timeout, self._ean, self._serial))
+                print("\nWARNING: Timeout (%s s) reached while waiting for"
+                      " device (ean:%s, sn:%s) to disappear!" % (timeout,
+                                                                 self._ean,
+                                                                 self._serial))
                 print('I will keep running and assume that I was too slow...')
                 return
             time.sleep(1)

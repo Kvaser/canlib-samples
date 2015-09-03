@@ -9,12 +9,11 @@ import kvaMemoLibXml
 #
 #  invoke with -help for more help
 
+
+# XML Values
 TRIG_LOG_ALL = 'TRIG_LOG_ALL'
 TRIG_ON_EVENT = 'TRIG_ON_EVENT'
 TRIG_SCRIPTED = 'TRIG_SCRIPTED'
-
-ACTION_START_LOG = 'ACTION_START_LOG'
-ACTION_STOP_LOG = 'ACTION_STOP_LOG'
 
 
 class kvFilter(object):
@@ -34,74 +33,407 @@ class kvFilter(object):
 
 
 class kvFilterMsgStop(object):
-    def __init__(self, active=True, protocol=None, msgid=None, msgid_min=None):
-        self.active = active
+    def __init__(self, protocol="NONE", msgid=None, dlc=None, msgid_min=None,
+                 channel=0):
         self.msgid = msgid
+        if msgid_min is None:
+            msgid_min = msgid
         self.msgid_min = msgid_min
-        if self.msgid_min is None:
-            self.msgid_min = self.msgid
+        self.dlc = dlc
+        self.protocol = protocol
+        self.channel = channel
 
 
 class kvTrigger(object):
 
-    def __init__(self, logmode=TRIG_LOG_ALL, fifomode=True):
+    def __init__(self, logmode=TRIG_LOG_ALL, fifomode=True):  # qqqmac rename logmode -> logAll
         self.logmode = logmode
         self.fifomode = fifomode
+        self.trigVarStartup = []
         self.trigVarTimer = []
         self.trigVarMsgId = []
+        self.trigVarMsgDlc = []
+        self.trigVarMsgErrorFrame = []
+        self.trigVarSigVal = []
         self.statement = []
 
-    def addTrigVarTimer(self, trigVarTimer):
-        self.trigVarTimer.append(trigVarTimer)
-
-    def addTrigVarMsgId(self, trigVarMsgId):
-        self.trigVarMsgId.append(trigVarMsgId)
+    def add(self, obj):
+        obj.addToTriggerList(self)
 
     def addStatement(self, trigStatement):
         self.statement.append(trigStatement)
 
+    def getXmlTriggers(self, document):
+        xmlTriggers = document.createElement('TRIGGERS')
+        for obj in self.trigVarStartup:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+
+        for obj in self.trigVarTimer:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+
+        for obj in self.trigVarMsgId:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+
+        for obj in self.trigVarMsgDlc:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+
+        for obj in self.trigVarMsgErrorFrame:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+
+        for obj in self.trigVarSigVal:
+            xmlTrigger = obj.getXml(document)
+            xmlTriggers.appendChild(xmlTrigger)
+        return xmlTriggers
+
+    def getXmlStatements(self, document):
+        xmlStatements = document.createElement('STATEMENTS')
+        for obj in self.statement:
+            xmlStatement = obj.getXml(document)
+            xmlStatements.appendChild(xmlStatement)
+        return xmlStatements
+
 
 class kvScript(object):
-    def __init__(self, filename):
+    def __init__(self, filename, path=''):
         self.filename = filename
+        self.path = path
+
+
+class kvTrigVarStartup(object):
+    def __init__(self, name="trigger_startup_0"):
+        self.name = name
+
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarStartup.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_STARTUP')
+        xmlTrigger.setAttribute('name', self.name)
+        return xmlTrigger
 
 
 class kvTrigVarTimer(object):
-    def __init__(self, idx=0, offset=600, repeat=False, channel=0, timeout=0):
-        self.idx = idx
+    def __init__(self, name="trigger_timer_0", offset=600, repeat=False,
+                 channel=0, timeout=0):
+        self.name = name
         self.offset = offset
         self.repeat = False
         self.channel = channel
         self.timeout = timeout
 
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarTimer.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_TIMER')
+        xmlTrigger.setAttribute('name', self.name)
+        xmlTrigger.setAttribute('offset', str(self.offset))
+        xmlTrigger.setAttribute('repeat', "YES" if self.repeat else "NO")
+        xmlTrigger.setAttribute('timeout', str(self.timeout))
+        return xmlTrigger
+
 
 class kvTrigVarMsgId(object):
-    def __init__(self, idx=0, channel=0, timeout=0, msgid=0, msgid_min=None,
-                 protocol="NONE"):
-        self.idx = idx
+    def __init__(self, name="trigger_msg_id_0", channel=0, timeout=0, msgid=0,
+                 msgid_min=None, protocol="NONE", msg_field=None,
+                 can_ext="NO", can_fd="NO"):
+        self.name = name
         self.channel = channel
         self.timeout = timeout
         self.msgid = msgid
         self.msgid_min = msgid_min
         self.protocol = protocol
+        self.msg_field = msg_field
+        self.can_ext = can_ext
+        self.can_fd = can_fd
         if self.msgid_min is None:
             self.msgid_min = self.msgid
 
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarMsgId.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_MSG_ID')
+        xmlTrigger.setAttribute('name', self.name)
+        xmlTrigger.setAttribute('channel', str(self.channel))
+        xmlTrigger.setAttribute('timeout', str(self.timeout))
+        xmlTrigger.setAttribute('msgid', str(self.msgid))
+        xmlTrigger.setAttribute('msgid_min', str(self.msgid_min))
+        xmlTrigger.setAttribute('protocol', str(self.protocol))
+        if self.msg_field is not None:
+            xmlTrigger.setAttribute('msg_field', str(self.msg_field))
+        xmlTrigger.setAttribute('can_ext', str(self.can_ext))
+        xmlTrigger.setAttribute('can_fd', str(self.can_fd))
+        return xmlTrigger
+
+
+class kvTrigVarMsgDlc(object):
+    def __init__(self, name="trigger_msg_dlc_0", channel=0, timeout=0, dlc=0,
+                 dlc_min=None, can_fd="NO"):
+        self.name = name
+        self.channel = channel
+        self.timeout = timeout
+        self.dlc = dlc
+        self.dlc_min = dlc_min
+        self.can_fd = can_fd
+        if self.dlc_min is None:
+            self.dlc_min = self.dlc
+
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarMsgDlc.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_MSG_DLC')
+        xmlTrigger.setAttribute('name', self.name)
+        xmlTrigger.setAttribute('channel', str(self.channel))
+        xmlTrigger.setAttribute('timeout', str(self.timeout))
+        xmlTrigger.setAttribute('dlc', str(self.dlc))
+        xmlTrigger.setAttribute('dlc_min', str(self.dlc_min))
+        xmlTrigger.setAttribute('can_fd', str(self.can_fd))
+        return xmlTrigger
+
+
+class kvTrigVarMsgErrorFrame(object):
+    def __init__(self, name="trigger_msg_errorframe_0", channel=0, timeout=0):
+        self.name = name
+        self.channel = channel
+        self.timeout = timeout
+
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarMsgErrorFrame.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_MSG_ERROR_FRAME')
+        xmlTrigger.setAttribute('name', self.name)
+        xmlTrigger.setAttribute('channel', str(self.channel))
+        xmlTrigger.setAttribute('timeout', str(self.timeout))
+        return xmlTrigger
+
+
+class kvTrigVarSigVal(object):
+
+    class condition(object):
+        ON_DATA_EQUAL_TO = "ON_DATA_EQUAL_TO"
+        ON_DATA_NOT_EQUAL_TO = "ON_DATA_NOT_EQUAL_TO"
+        ON_DATA_LARGER_THAN = "ON_DATA_LARGER_THAN"
+        ON_DATA_SMALLER_THAN = "ON_DATA_SMALLER_THAN"
+        ON_DATA_CHANGE_TO = "ON_DATA_CHANGE_TO"
+        ON_DATA_CHANGE_FROM = "ON_DATA_CHANGE_FROM"
+        ON_DATA_CHANGE = "ON_DATA_CHANGE"
+        ON_DATA_LARGER_THAN_OR_EQUAL = "ON_DATA_LARGER_THAN_OR_EQUAL"
+        ON_DATA_SMALLER_THAN_OR_EQUAL = "ON_DATA_SMALLER_THAN_OR_EQUAL"
+
+    class byteorder(object):
+        INTEL = "LITTLE_ENDIAN"
+        LITTLE_ENDIAN = "LITTLE_ENDIAN"
+        MOTOROLA = "BIG_ENDIAN"
+        BIG_ENDIAN = "BIG_ENDIAN"
+
+    def __init__(self, name="trigger_sigval_0", channel=0, timeout=0, msgid=0,
+                 dlc=8, startbit=0, length=8, datatype="UNSIGNED",
+                 byteorder="BIG_ENDIAN", protocol="NONE", msg_field=None,
+                 data=0, data_min=None, condition=condition.ON_DATA_EQUAL_TO,
+                 can_ext="NO", can_fd="NO"):
+        self.name = name
+        self.channel = channel
+        self.timeout = timeout
+        self.msgid = msgid
+        self.dlc = dlc
+        self.startbit = startbit
+        self.length = length
+        self.datatype = datatype
+        self.byteorder = byteorder
+        self.data = data
+        self.data_min = data_min
+        self.protocol = protocol
+        self.msg_field = msg_field
+        self.can_ext = can_ext
+        self.can_fd = can_fd
+        self.condition = condition
+        if self.data_min is None:
+            self.data_min = self.data
+
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVarSigVal.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_SIGVAL')
+        xmlTrigger.setAttribute('name', self.name)
+        xmlTrigger.setAttribute('channel', str(self.channel))
+        xmlTrigger.setAttribute('timeout', str(self.timeout))
+        xmlTrigger.setAttribute('msgid', str(self.msgid))
+        xmlTrigger.setAttribute('protocol', str(self.protocol))
+        if self.msg_field is not None:
+            xmlTrigger.setAttribute('msg_field', str(self.msg_field))
+        xmlTrigger.setAttribute('startbit', str(self.startbit))
+        xmlTrigger.setAttribute('length', str(self.length))
+        xmlTrigger.setAttribute('dlc', str(self.dlc))
+        xmlTrigger.setAttribute('datatype', str(self.datatype))
+        xmlTrigger.setAttribute('byteorder', str(self.byteorder))
+        xmlTrigger.setAttribute('data', str(self.data))
+        xmlTrigger.setAttribute('data_min', str(self.data_min))
+        xmlTrigger.setAttribute('can_ext', str(self.can_ext))
+        xmlTrigger.setAttribute('can_fd', str(self.can_fd))
+        xmlTrigger.setAttribute('condition', str(self.condition))
+        return xmlTrigger
+
 
 class kvTrigStatement(object):
-    def __init__(self, noOfActions=1, preTrigger=0, postTrigger=0,
-                 postFixExpr=0, function=ACTION_START_LOG, param=0):
-        self.noOfActions = noOfActions
+    def __init__(self, expression, preTrigger=0, postTrigger=0):
         self.preTrigger = preTrigger
         self.postTrigger = postTrigger
-        self.postFixExpr = postFixExpr
+        self.expression = expression
+        self.actions = []
+
+    def add(self, obj):
+        if isinstance(obj, kvTrigAction):
+            self.actions.append(obj)
+        else:
+            raise Exception(
+                "ERROR: (kvTrigStatement) Can not add object of type {0}!".format(
+                    type(obj).__name__))
+
+    def addToTriggerList(self, triggerList):
+        triggerList.statement.append(self)
+
+    def getXml(self, document):
+        xmlStatement = document.createElement('STATEMENT')
+        xmlStatement.setAttribute('pretrigger', str(self.preTrigger))
+        xmlStatement.setAttribute('posttrigger', str(self.postTrigger))
+        xmlExpression = document.createElement('EXPRESSION')
+        text = document.createTextNode(str(self.expression))
+        xmlExpression.appendChild(text)
+        xmlStatement.appendChild(xmlExpression)
+        xmlActions = document.createElement('ACTIONS')
+        xmlStatement.appendChild(xmlActions)
+        for obj in self.actions:
+            xmlAction = obj.getXml(document)
+            xmlActions.appendChild(xmlAction)
+        return xmlStatement
+
+
+class kvTrigAction(object):
+    class function:
+        START_LOG = 'ACTION_START_LOG'
+        STOP_LOG = 'ACTION_STOP_LOG'
+        ACTIVATE_AUTO_TRANSMIT_LIST = 'ACTION_ACTIVATE_AUTO_TRANSMIT_LIST'
+        DEACTIVATE_AUTO_TRANSMIT_LIST = 'ACTION_DEACTIVATE_AUTO_TRANSMIT_LIST'
+        EXTERNAL_PULSE = 'ACTION_EXTERNAL_PULSE'
+
+    def __init__(self, function=function.START_LOG, name=None, duration=0):
         self.function = function
-        self.param = param
+        self.name = name
+        self.duration = duration
+
+    def getXml(self, document):
+        xmlAction = document.createElement(self.function)
+
+        if (self.function is kvTrigAction.function.ACTIVATE_AUTO_TRANSMIT_LIST or
+            self.function is kvTrigAction.function.DEACTIVATE_AUTO_TRANSMIT_LIST):
+            xmlAction.setAttribute('name', str(self.name))
+
+        if self.function is kvTrigAction.function.EXTERNAL_PULSE:
+            xmlAction.setAttribute('duration', str(self.duration))
+
+        return xmlAction
+
+
+class kvMessage(object):
+    def __init__(self, name, msgid, data, dlc=None, can_ext=False,
+                 can_fd=False, can_fd_brs=False, error_frame=False,
+                 remote_frame=False):
+        self.name = name
+        self.msgid = msgid
+        self.data = data
+        self.dlc = dlc
+        self.can_ext = can_ext
+        self.can_fd = can_fd
+        self.can_fd_brs = can_fd_brs
+        self.error_frame = error_frame
+        self.remote_frame = remote_frame
+
+    def getXml(self, document):
+        xmlStatement = document.createElement('MESSAGE')
+        xmlStatement.setAttribute('name', self.name)
+        xmlStatement.setAttribute('msgid', str(self.msgid))
+        data_len = len(self.data)
+        if data_len > 8:
+            data_len = 8
+        if self.dlc is None:
+            self.dlc = data_len
+        xmlStatement.setAttribute('dlc', str(self.dlc))
+        for d in range(0, data_len):
+            xmlStatement.setAttribute('b' + str(d), str(self.data[d]))
+        xmlStatement.setAttribute('can_ext', "YES" if self.can_ext else "NO")
+        xmlStatement.setAttribute('can_fd', "YES" if self.can_fd else "NO")
+        xmlStatement.setAttribute('can_fd_brs',
+                                  "YES" if self.can_fd_brs else "NO")
+        xmlStatement.setAttribute('error_frame',
+                                  "YES" if self.error_frame else "NO")
+        xmlStatement.setAttribute('remote_frame',
+                                  "YES" if self.remote_frame else "NO")
+        return xmlStatement
+
+
+class kvTransmitList(object):
+    def __init__(self, name, msg_delay=0, cycle_delay=0, cyclic=False,
+                 autostart=False):
+        self.name = name
+        self.msg_delay = msg_delay
+        self.cycle_delay = cycle_delay
+        self.cyclic = cyclic
+        self.messages = []
+
+    def add(self, obj):
+        if isinstance(obj, kvTransmitMessage):
+            self.messages.append(obj)
+        else:
+            raise Exception(
+                "ERROR: (kvTransmitList) Can not add object of type {0}!".format(type(obj).__name__))
+
+    def getXml(self, document):
+        xmlTransmitList = document.createElement('TRANSMIT_LIST')
+        xmlTransmitList.setAttribute('name', self.name)
+        xmlTransmitList.setAttribute('msg_delay', str(self.msg_delay))
+        xmlTransmitList.setAttribute('cycle_delay', str(self.cycle_delay))
+        xmlTransmitList.setAttribute('cyclic', "YES" if self.cyclic else "NO")
+        if self.messages is None:
+            return xmlTransmitList
+        for message in self.messages:
+            xmlTransmitMessage = message.getXml(document)
+            xmlTransmitList.appendChild(xmlTransmitMessage)
+        return xmlTransmitList
+
+class kvTransmitMessage(object):
+    def __init__(self, name, channel=0):
+        self.name = name
+        self.channel = channel
+
+    def getXml(self, document):
+        xmlTransmitList = document.createElement('TRANSMIT_MESSAGE')
+        xmlTransmitList.setAttribute('name', self.name)
+        xmlTransmitList.setAttribute('channel', str(self.channel))
+        return xmlTransmitList
+
+
+class ValidationResult(object):
+    def __init__(self, severity, status, text):
+        self.severity = severity
+        self.status = status
+        self.text = text
+
+    def __str__(self):
+        return "[%s %d]: %s" % (self.severity, self.status, self.text)
 
 
 class kvMemoConfig(object):
 
-    def __init__(self, version="1.5", afterburner=0, log_all=False,
+    def __init__(self, version="2.0", afterburner=0, log_all=False,
                  fifo_mode="NO", param_lif=None, param_xml=None):
         if param_lif is not None:
             self.parseLif(param_lif)
@@ -116,24 +448,24 @@ class kvMemoConfig(object):
             self.document.appendChild(root)
             comment = self.document.createComment("Created with memoConfig.py")
             root.appendChild(comment)
-            child = self.document.createElement("VERSION")
+            child = self.document.createElement('VERSION')
             text = self.document.createTextNode(version)
             child.appendChild(text)
             root.appendChild(child)
-            xmlSettings = self.document.createElement("SETTINGS")
+            xmlSettings = self.document.createElement('SETTINGS')
             root.appendChild(xmlSettings)
-            xmlMode = self.document.createElement("MODE")
-            xmlMode.setAttribute("log_all", "YES" if log_all else "NO")
-            xmlMode.setAttribute("fifo_mode", fifo_mode)
+            xmlMode = self.document.createElement('MODE')
+            xmlMode.setAttribute('log_all', "YES" if log_all else "NO")
+            xmlMode.setAttribute('fifo_mode', fifo_mode)
             xmlSettings.appendChild(xmlMode)
-            xmlCanpower = self.document.createElement("CANPOWER")
-            xmlCanpower.setAttribute("timeout", str(afterburner))
+            xmlCanpower = self.document.createElement('CANPOWER')
+            xmlCanpower.setAttribute('timeout', str(afterburner))
             xmlSettings.appendChild(xmlCanpower)
 
     def addBusparams(self, rateParam, channel=0, silent=False):
-        child = self.document.getElementsByTagName('BUSPARAMS')
+        child = self.document.getElementsByTagName('CAN_BUS')
         if not child:
-            child = self.document.createElement("BUSPARAMS")
+            child = self.document.createElement('CAN_BUS')
             self.document.documentElement.appendChild(child)
         else:
             child = child[0]
@@ -141,151 +473,106 @@ class kvMemoConfig(object):
         PhSeg1 = PhSeg2
         PrSeg = (rateParam.tseg1 + rateParam.tseg2) - (PhSeg1 + PhSeg2)
         PSC = (16000000 / (rateParam.freq * (1 + PrSeg + PhSeg1 + PhSeg2))) - 1
-        newchild = self.document.createElement("parameters")
-        newchild.setAttribute("channel", str(channel))
-        newchild.setAttribute("PhSeg1", str(PhSeg1))
-        newchild.setAttribute("PhSeg2", str(PhSeg2))
-        newchild.setAttribute("PrSeg", str(PrSeg))
-        newchild.setAttribute("PSC", str(PSC))
-        newchild.setAttribute("samples", str(rateParam.nosamp))
-        newchild.setAttribute("SJW", str(rateParam.sjw))
-        newchild.setAttribute("silent", "YES" if silent else "NO")
-        newchild.setAttribute("highspeed",
-                              "YES" if rateParam.syncMode else "NO")
+        newchild = self.document.createElement('PARAMETERS')
+        newchild.setAttribute('channel', str(channel))
+        newchild.setAttribute('phase_seg1', str(PhSeg1))
+        newchild.setAttribute('phase_seg2', str(PhSeg2))
+        newchild.setAttribute('prop_seg', str(PrSeg))
+        newchild.setAttribute('prescaler', str(PSC))
+        newchild.setAttribute('sjw', str(rateParam.sjw))
+        newchild.setAttribute('silent', "YES" if silent else "NO")
         child.appendChild(newchild)
 
-    def add(self, object):
-        if isinstance(object, kvTrigger):
-            self.addTrigger(object)
-        elif isinstance(object, kvFilter):
-            self.addFilter(object)
+    def add(self, obj):
+        if isinstance(obj, kvTrigger):
+            self.addTrigger(obj)
+        elif isinstance(obj, kvFilter):
+            self.addFilter(obj)
+        elif isinstance(obj, kvMessage):
+            self.addMessage(obj)
+        elif isinstance(obj, kvTransmitList):
+            self.addTransmitList(obj)
         else:
-            raise Exception("ERROR: (kvMemoConfig) Can not add object of type %s!" % type(object).__name__)
+            raise Exception(
+                "ERROR: (kvMemoConfig) Can not add object of type {0}!".format(
+                    type(obj).__name__))
+
+    def _addFilterAttribute(self, xmlFilterMsg, filter):
+        xmlFilterMsg.setAttribute('msgid', str(filter.msgid))
+        xmlFilterMsg.setAttribute('msgid_min', str(filter.msgid_min))
+        xmlFilterMsg.setAttribute('protocol', str(filter.protocol))
+        xmlChannel = self.document.createElement('CHANNEL')
+        text = self.document.createTextNode(str(filter.channel))
+        xmlChannel.appendChild(text)
+        xmlFilterMsg.appendChild(xmlChannel)
 
     def addFilter(self, filter):
-        xmlFilterBlock = self.document.createElement("FILTERBLOCK")
+        xmlFilterBlock = self.document.createElement('FILTERS')
         self.document.documentElement.appendChild(xmlFilterBlock)
-        # numPassFilter = len(filter.msgPass) numFilter = numPassFilter +
-        # len(filter.msgStop) print "numFilter: %d" % numFilter #qqqmac hard
-        # coded for now if numFilter == 1: maskHigh = 0 maskLow = 1
-        # xmlFilterArray = self.document.createElement("filterarray")
-        # xmlFilterArray.setAttribute("activeFiltersMaskHigh", str(maskHigh))
-        # xmlFilterArray.setAttribute("activeFiltersMaskLow", str(maskLow))
-        # xmlFilterArray.setAttribute("numberOfPassFilters",
-        # str(numPassFilter))
-        # xmlFilterArray.setAttribute("totalNumberOfFilters", str(numFilter))
-        # xmlFilterBlock.appendChild(xmlFilterArray)
-        xmlFilterArray = self.document.createElement("filterarray")
-        xmlFilterBlock.appendChild(xmlFilterArray)
-        xmlFilterArray.setAttribute("activeFiltersMaskHigh", "0x0")
-        xmlFilterArray.setAttribute("activeFiltersMaskLow", "0x3")
-        xmlFilterArray.setAttribute("numberOfPassFilters", str(0))
-        xmlFilterArray.setAttribute("totalNumberOfFilters", str(2))
-        xmlFilterArray.setAttribute("channel", str(0))
-        xmlFilterMsg = self.document.createElement("filterMsg")
-        xmlFilterArray.appendChild(xmlFilterMsg)
-        xmlFilterMsg.setAttribute("filter", "FILTER_TYPE_ONLY_ID")
-        xmlFilterMsg.setAttribute("idx", str(0))
-        xmlFilterMsg.setAttribute("msgid", "0x1")
-        xmlFilterMsg.setAttribute("msgid_min", str(1))
-        xmlFilterMsg.setAttribute("type", "STOP")
+        if filter is None:
+            return
 
-        xmlFilterMsg = self.document.createElement("filterMsg")
-        xmlFilterArray.appendChild(xmlFilterMsg)
-        xmlFilterMsg.setAttribute("filter", "FILTER_TYPE_ONLY_ID")
-        xmlFilterMsg.setAttribute("idx", str(1))
-        xmlFilterMsg.setAttribute("msgid", "0xa")
-        xmlFilterMsg.setAttribute("msgid_min", "0x7")
-        xmlFilterMsg.setAttribute("type", "STOP")
-
-        xmlFilterArray = self.document.createElement("filterarray")
-        xmlFilterBlock.appendChild(xmlFilterArray)
-        xmlFilterArray.setAttribute("activeFiltersMaskHigh", "0x0")
-        xmlFilterArray.setAttribute("activeFiltersMaskLow", "0x7")
-        xmlFilterArray.setAttribute("numberOfPassFilters", str(0))
-        xmlFilterArray.setAttribute("totalNumberOfFilters", str(3))
-        xmlFilterArray.setAttribute("channel", str(1))
-        xmlFilterMsg = self.document.createElement("filterMsg")
-        xmlFilterArray.appendChild(xmlFilterMsg)
-        xmlFilterMsg.setAttribute("filter", "FILTER_TYPE_ONLY_ID")
-        xmlFilterMsg.setAttribute("idx", str(0))
-        xmlFilterMsg.setAttribute("msgid", "0x1")
-        xmlFilterMsg.setAttribute("msgid_min", str(1))
-        xmlFilterMsg.setAttribute("type", "STOP")
-
-        xmlFilterMsg = self.document.createElement("filterMsg")
-        xmlFilterArray.appendChild(xmlFilterMsg)
-        xmlFilterMsg.setAttribute("filter", "FILTER_TYPE_ONLY_ID")
-        xmlFilterMsg.setAttribute("idx", str(1))
-        xmlFilterMsg.setAttribute("msgid", "0x2")
-        xmlFilterMsg.setAttribute("msgid_min", str(2))
-        xmlFilterMsg.setAttribute("type", "STOP")
-
-        xmlFilterMsg = self.document.createElement("filterMsg")
-        xmlFilterArray.appendChild(xmlFilterMsg)
-        xmlFilterMsg.setAttribute("filter", "FILTER_TYPE_ONLY_ID")
-        xmlFilterMsg.setAttribute("idx", str(2))
-        xmlFilterMsg.setAttribute("msgid", "0x9")
-        xmlFilterMsg.setAttribute("msgid_min", "0x6")
-        xmlFilterMsg.setAttribute("type", "STOP")
+        for obj in filter.msgStop:
+            xmlFilterMsg = self.document.createElement('MESSAGE_STOP')
+            xmlFilterBlock.appendChild(xmlFilterMsg)
+            self._addFilterAttribute(xmlFilterMsg, obj)
+        for obj in filter.msgPass:
+            xmlFilterMsg = self.document.createElement('MESSAGE_PASS')
+            xmlFilterBlock.appendChild(xmlFilterMsg)
+            self._addFilterAttribute(xmlFilterMsg, obj)
 
     def addTrigger(self, trigger):
-        xmlTriggerBlock = self.document.createElement("TRIGGERBLOCK")
+        xmlTriggerBlock = self.document.createElement('TRIGGERBLOCK')
         self.document.documentElement.appendChild(xmlTriggerBlock)
-        # qqqmac We currently need a triggerblock
         if trigger is None:
             return
 
-        xmlTriggers = self.document.createElement("TRIGGERS")
+        xmlTriggers = trigger.getXmlTriggers(self.document)
         xmlTriggerBlock.appendChild(xmlTriggers)
-        for obj in trigger.trigVarTimer:
-            xmlTrigger = self.document.createElement("TRIGGER_TIMER")
-            xmlTrigger.setAttribute("idx", str(obj.idx))
-            xmlTrigger.setAttribute("offset", str(obj.offset))
-            xmlTrigger.setAttribute("repeat", "YES" if obj.repeat else "NO")
-            # xmlTrigger.setAttribute("channel", str(obj.channel))
-            xmlTrigger.setAttribute("timeout", str(obj.timeout))
-            xmlTriggers.appendChild(xmlTrigger)
 
-        for obj in trigger.trigVarMsgId:
-            xmlTrigger = self.document.createElement("TRIGGER_MSG_ID")
-            xmlTrigger.setAttribute("idx", str(obj.idx))
-            xmlTrigger.setAttribute("channel", str(obj.channel))
-            xmlTrigger.setAttribute("timeout", str(obj.timeout))
-            xmlTrigger.setAttribute("msgid", str(obj.msgid))
-            xmlTrigger.setAttribute("msgid_min", str(obj.msgid_min))
-            xmlTrigger.setAttribute("protocol", str(obj.protocol))
-            xmlTriggers.appendChild(xmlTrigger)
-
-        xmlStatements = self.document.createElement("STATEMENTS")
+        xmlStatements = trigger.getXmlStatements(self.document)
         xmlTriggerBlock.appendChild(xmlStatements)
-        for obj in trigger.statement:
-            xmlStatement = self.document.createElement("STATEMENT")
-            xmlStatement.setAttribute("noOfActions", str(obj.noOfActions))
-            xmlStatement.setAttribute("preTrigger", str(obj.preTrigger))
-            xmlStatement.setAttribute("postTrigger", str(obj.postTrigger))
-            xmlStatements.appendChild(xmlStatement)
-            xmlPostFixExpr = self.document.createElement("POSTFIXEXPR")
-            text = self.document.createTextNode(str(obj.postFixExpr))
-            xmlPostFixExpr.appendChild(text)
-            xmlStatement.appendChild(xmlPostFixExpr)
-            xmlAction = self.document.createElement("ACTION")
-            xmlAction.setAttribute("function", obj.function)
-            xmlAction.setAttribute("param", str(obj.param))
-            xmlStatement.appendChild(xmlAction)
+
+    def addMessage(self, message):
+        xmlBlocks = self.document.getElementsByTagName('MESSAGES')
+        if len(xmlBlocks):
+            xmlMessageBlock = xmlBlocks[0]
+        else:
+            xmlMessageBlock = self.document.createElement('MESSAGES')
+            self.document.documentElement.appendChild(xmlMessageBlock)
+        if message is None:
+            return
+
+        xmlMessage = message.getXml(self.document)
+        xmlMessageBlock.appendChild(xmlMessage)
+
+    def addTransmitList(self, transmitList):
+        xmlBlocks = self.document.getElementsByTagName('TRANSMIT_LISTS')
+        if len(xmlBlocks):
+            xmlTranmitListBlock = xmlBlocks[0]
+        else:
+            xmlTranmitListBlock = self.document.createElement('TRANSMIT_LISTS')
+            self.document.documentElement.appendChild(xmlTranmitListBlock)
+        if transmitList is None:
+            return
+        xmlTranmitList = transmitList.getXml(self.document)
+        xmlTranmitListBlock.appendChild(xmlTranmitList)
 
     def addScript(self, script, channel=0):
-        xmlScripts = self.document.createElement("SCRIPTS")
+        xmlScripts = self.document.createElement('SCRIPTS')
         self.document.documentElement.appendChild(xmlScripts)
-        xmlScript = self.document.createElement("script")
-        xmlScript.setAttribute("used", "1")
-        xmlScript.setAttribute("primary", "1")
-        xmlScript.setAttribute("defaultChannel", str(channel))
+        xmlScript = self.document.createElement('SCRIPT')
+        xmlScript.setAttribute('primary', "YES")
+        xmlScript.setAttribute('default_channel', str(channel))
         xmlScripts.appendChild(xmlScript)
-        newchild = self.document.createElement("scriptfilename")
+        elementScript = self.document.createElement('FILENAME')
         text = self.document.createTextNode(script.filename)
-        newchild.appendChild(text)
-        xmlScripts.appendChild(newchild)
+        elementScript.appendChild(text)
+        xmlScript.appendChild(elementScript)
+        elementPath = self.document.createElement('PATH')
+        text = self.document.createTextNode(script.path)
+        elementPath.appendChild(text)
+        xmlScript.appendChild(elementPath)
 
     def parseLif(self, conf_lif):
         xl = kvaMemoLibXml.kvaMemoLibXml()
@@ -294,6 +581,24 @@ class kvMemoConfig(object):
 
     def parseXml(self, conf_xml):
         self.document = minidom.parseString(conf_xml)
+
+    def validate(self):
+        result = []
+        xl = kvaMemoLibXml.kvaMemoLibXml()
+        (countErr, countWarn) = xl.kvaXmlValidate(self.document.toxml())
+        while countErr > 0:
+            (status, text) = xl.xmlGetValidationError()
+            if status == 0:
+                break
+            result.append(ValidationResult(severity='error', status=status,
+                                           text=text))
+        while countWarn > 0:
+            (status, text) = xl.xmlGetValidationWarning()
+            if status == 0:
+                break
+            result.append(ValidationResult(severity='warning', status=status,
+                                           text=text))
+        return result
 
     def toXml(self):
         return self.document.toxml()
@@ -315,17 +620,16 @@ if __name__ == '__main__':
     memoConfig.addBusparams(channel=1, rateParam=rate)
 
     trigger = kvTrigger(logmode=TRIG_ON_EVENT, fifomode=False)
-    trigVarTimer = kvTrigVarTimer(idx=0, offset=10)
+    trigVarTimer = kvTrigVarTimer(name="trigger_timer_0", offset=10)
     trigger.addTrigVarTimer(trigVarTimer)
-    trigVarTimer = kvTrigVarTimer(idx=1, offset=20)
+    trigVarTimer = kvTrigVarTimer(idx="trigger_timer_1", offset=20)
     trigger.addTrigVarTimer(trigVarTimer)
-    trigStatement = kvTrigStatement(postFixExpr=0, function=ACTION_START_LOG,
-                                    param=1)
+    trigStatement = kvTrigStatement(postFixExpr="trigger_timer_0",
+                                    function=ACTION_START_LOG)
     trigger.addStatement(trigStatement)
-    trigStatement = kvTrigStatement(postFixExpr=1, function=ACTION_STOP_LOG,
-                                    param=1)
+    trigStatement = kvTrigStatement(postFixExpr="trigger_timer_1",
+                                    function=ACTION_STOP_LOG)
     trigger.addStatement(trigStatement)
-
     memoConfig.addTrigger(trigger)
 
     script = kvScript("test_script.txe")

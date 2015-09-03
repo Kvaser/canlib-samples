@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from ctypes import *
+import ctypes as ct
 import sys
 import struct
 import logging
@@ -161,6 +161,7 @@ kvENVVAR_TYPE_INT = 1
 kvENVVAR_TYPE_FLOAT = 2
 kvENVVAR_TYPE_STRING = 3
 
+
 class canError(Exception):
     def __init__(self, canlib, canERR):
         self.canlib = canlib
@@ -168,8 +169,8 @@ class canError(Exception):
         self.fn = canlib.fn
 
     def __canGetErrorText(self):
-        msg = create_string_buffer(80)
-        self.canlib.dll.canGetErrorText(self.canERR, msg, sizeof(msg))
+        msg = ct.create_string_buffer(80)
+        self.canlib.dll.canGetErrorText(self.canERR, msg, ct.sizeof(msg))
         return msg.value
 
     def __str__(self):
@@ -186,6 +187,7 @@ class canNoMsg(canError):
     def __str__(self):
         return "No messages available"
 
+
 class canScriptFail(canError):
     def __init__(self, canlib, canERR):
         self.canlib = canlib
@@ -201,24 +203,23 @@ class EnvvarException(Exception):
 
 class EnvvarValueError(EnvvarException):
     def __init__(self, envvar, type_, value):
-        msg = "invalid literal for envvar ({envvar}) with type {type_}: {value}"
-        msg.format(envvar = envvar,
-                   type_ = type_,
-                   value = value)
-        super(EnvvarValueError, self).__init__(message)
+        msg = ("invalid literal for envvar ({envvar}) with"
+               " type {type_}: {value}")
+        msg.format(envvar=envvar, type_=type_, value=value)
+        super(EnvvarValueError, self).__init__(msg)
 
 
 class EnvvarNameError(EnvvarException):
     def __init__(self, envvar):
         msg = "envvar names must not start with an underscore: {envvar}"
-        msg.format(envvar = envvar)
-        super(EnvvarValueError, self).__init__(message)
+        msg.format(envvar=envvar)
+        super(EnvvarValueError, self).__init__(msg)
 
 
-class canVersion(Structure):
+class canVersion(ct.Structure):
     _fields_ = [
-        ("minor", c_uint8),
-        ("major", c_uint8),
+        ("minor", ct.c_uint8),
+        ("major", ct.c_uint8),
         ]
 
     def __str__(self):
@@ -236,7 +237,7 @@ class bitrateSetting(object):
         self.syncMode = syncMode
 
     def __str__(self):
-        txt = "freq     : %8d\n" % self.freq
+        txt = "freq    : %8d\n" % self.freq
         txt += "tseg1   : %8d\n" % self.tseg1
         txt += "tseg2   : %8d\n" % self.tseg2
         txt += "sjw     : %8d\n" % self.sjw
@@ -251,9 +252,6 @@ class bitrateSetting(object):
 
 class canlib(object):
 
-    # definitions
-    canMessage = 8 * c_uint8
-
     def __init__(self, debug=None):
         fmt = '[%(levelname)s] %(funcName)s: %(message)s'
         if debug:
@@ -266,167 +264,181 @@ class canlib(object):
                                 format=fmt)
 
         if sys.platform.startswith('win'):
-            self.dll = WinDLL('canlib32')
+            self.dll = ct.WinDLL('canlib32')
             self.dll.canInitializeLibrary()
         else:
-            self.dll = CDLL('libcanlib.so')
+            self.dll = ct.CDLL('libcanlib.so')
 
         # protptypes
         self.dll.canGetVersion.argtypes = []
-        self.dll.canGetVersion.restype = c_short
-        self.dll.canGetVersion.errchk = self._canErrorCheck
+        self.dll.canGetVersion.restype = ct.c_short
+        self.dll.canGetVersion.errcheck = self._canErrorCheck
 
-        self.dll.canGetNumberOfChannels.argtypes = [POINTER(c_int)]
+        self.dll.canGetNumberOfChannels.argtypes = [ct.POINTER(ct.c_int)]
         self.dll.canGetNumberOfChannels.errcheck = self._canErrorCheck
 
-        self.dll.canGetChannelData.argtypes = [c_int, c_int, c_void_p,
-                                               c_size_t]
+        self.dll.canGetChannelData.argtypes = [ct.c_int, ct.c_int,
+                                               ct.c_void_p, ct.c_size_t]
         self.dll.canGetChannelData.errcheck = self._canErrorCheck
 
-        self.dll.canOpenChannel.argtypes = [c_int, c_int]
+        self.dll.canOpenChannel.argtypes = [ct.c_int, ct.c_int]
         self.dll.canOpenChannel.errcheck = self._canErrorCheck
 
-        self.dll.canClose.argtypes = [c_int]
+        self.dll.canClose.argtypes = [ct.c_int]
         self.dll.canClose.errcheck = self._canErrorCheck
 
-        self.dll.canSetBusParams.argtypes = [c_int, c_long, c_uint,
-                                             c_uint, c_uint, c_uint, c_uint]
+        self.dll.canSetBusParams.argtypes = [ct.c_int, ct.c_long, ct.c_uint,
+                                             ct.c_uint, ct.c_uint, ct.c_uint,
+                                             ct.c_uint]
         self.dll.canSetBusParams.errcheck = self._canErrorCheck
 
-        self.dll.canGetBusParams.argtypes = [c_int, POINTER(c_long),
-                                             POINTER(c_uint), POINTER(c_uint),
-                                             POINTER(c_uint), POINTER(c_uint),
-                                             POINTER(c_uint)]
+        self.dll.canGetBusParams.argtypes = [ct.c_int, ct.POINTER(ct.c_long),
+                                             ct.POINTER(ct.c_uint),
+                                             ct.POINTER(ct.c_uint),
+                                             ct.POINTER(ct.c_uint),
+                                             ct.POINTER(ct.c_uint),
+                                             ct.POINTER(ct.c_uint)]
         self.dll.canGetBusParams.errcheck = self._canErrorCheck
 
-        self.dll.canSetBusParamsFd.argtypes = [c_int, c_long, c_uint, c_uint,
-                                               c_uint]
+        self.dll.canSetBusParamsFd.argtypes = [ct.c_int, ct.c_long, ct.c_uint,
+                                               ct.c_uint, ct.c_uint]
         self.dll.canSetBusParamsFd.errcheck = self._canErrorCheck
 
-        self.dll.canGetBusParamsFd.argtypes = [c_int, POINTER(c_long),
-                                               POINTER(c_uint),
-                                               POINTER(c_uint),
-                                               POINTER(c_uint)]
+        self.dll.canGetBusParamsFd.argtypes = [ct.c_int, ct.POINTER(ct.c_long),
+                                               ct.POINTER(ct.c_uint),
+                                               ct.POINTER(ct.c_uint),
+                                               ct.POINTER(ct.c_uint)]
         self.dll.canGetBusParamsFd.errcheck = self._canErrorCheck
-        self.dll.canFdSecondarySamplePoint.argtypes = [c_int, POINTER(c_uint),
-                                                       c_int]
-        self.dll.canFdSecondarySamplePoint.errcheck = self._canErrorCheck
 
-        self.dll.canBusOn.argtypes = [c_int]
+        self.dll.canBusOn.argtypes = [ct.c_int]
         self.dll.canBusOn.errcheck = self._canErrorCheck
 
-        self.dll.canBusOff.argtypes = [c_int]
+        self.dll.canBusOff.argtypes = [ct.c_int]
         self.dll.canBusOff.errcheck = self._canErrorCheck
 
-        self.dll.canTranslateBaud.atgtypes = [POINTER(c_long),
-                                              POINTER(c_uint),
-                                              POINTER(c_uint),
-                                              POINTER(c_uint),
-                                              POINTER(c_uint),
-                                              POINTER(c_uint)]
+        self.dll.canTranslateBaud.atgtypes = [ct.POINTER(ct.c_long),
+                                              ct.POINTER(ct.c_uint),
+                                              ct.POINTER(ct.c_uint),
+                                              ct.POINTER(ct.c_uint),
+                                              ct.POINTER(ct.c_uint),
+                                              ct.POINTER(ct.c_uint)]
         self.dll.canTranslateBaud.errcheck = self._canErrorCheck
 
-        self.dll.canWrite.argtypes = [c_int, c_long, c_void_p, c_uint,
-                                      c_uint]
+        self.dll.canWrite.argtypes = [ct.c_int, ct.c_long, ct.c_void_p,
+                                      ct.c_uint, ct.c_uint]
         self.dll.canWrite.errcheck = self._canErrorCheck
 
-        self.dll.canWriteWait.argtypes = [c_int, c_long, c_void_p, c_uint,
-                                          c_uint, c_ulong]
+        self.dll.canWriteWait.argtypes = [ct.c_int, ct.c_long,
+                                          ct.c_void_p, ct.c_uint,
+                                          ct.c_uint, ct.c_ulong]
         self.dll.canWriteWait.errcheck = self._canErrorCheck
 
-        self.dll.canReadWait.argtypes = [c_int, POINTER(c_long), c_void_p,
-                                         POINTER(c_uint), POINTER(c_uint),
-                                         POINTER(c_ulong), c_ulong]
+        self.dll.canReadWait.argtypes = [ct.c_int, ct.POINTER(ct.c_long),
+                                         ct.c_void_p,
+                                         ct.POINTER(ct.c_uint),
+                                         ct.POINTER(ct.c_uint),
+                                         ct.POINTER(ct.c_ulong), ct.c_ulong]
         self.dll.canReadWait.errcheck = self._canErrorCheck
 
         try:
-            self.dll.canReadSpecificSkip.argtypes = [c_int, c_long,
-                                                     c_void_p,
-                                                     POINTER(c_uint),
-                                                     POINTER(c_uint),
-                                                     POINTER(c_ulong)]
+            self.dll.canReadSpecificSkip.argtypes = [ct.c_int, ct.c_long,
+                                                     ct.c_void_p,
+                                                     ct.POINTER(ct.c_uint),
+                                                     ct.POINTER(ct.c_uint),
+                                                     ct.POINTER(ct.c_ulong)]
             self.dll.canReadSpecificSkip.errcheck = self._canErrorCheck
         except Exception as e:
             logging.debug(str(e) + ' (Not implemented in Linux)')
 
         try:
-            self.dll.canReadSyncSpecific.argtypes = [c_int, c_long, c_ulong]
+            self.dll.canReadSyncSpecific.argtypes = [ct.c_int, ct.c_long,
+                                                     ct.c_ulong]
             self.dll.canReadSyncSpecific.errcheck = self._canErrorCheck
         except Exception as e:
             logging.debug(str(e) + ' (Not implemented in Linux)')
 
-        self.dll.canSetBusOutputControl.argtypes = [c_int, c_ulong]
+        self.dll.canSetBusOutputControl.argtypes = [ct.c_int, ct.c_ulong]
         self.dll.canSetBusOutputControl.errcheck = self._canErrorCheck
 
-        self.dll.canIoCtl.argtypes = [c_int, c_uint, c_void_p, c_uint]
+        self.dll.canIoCtl.argtypes = [ct.c_int, ct.c_uint, ct.c_void_p,
+                                      ct.c_uint]
         self.dll.canIoCtl.errcheck = self._canErrorCheck
 
         try:
-            self.dll.kvReadDeviceCustomerData.argtypes = [c_int, c_int, c_int,
-                                                          c_void_p,
-                                                          c_size_t]
+            self.dll.kvReadDeviceCustomerData.argtypes = [ct.c_int, ct.c_int,
+                                                          ct.c_int,
+                                                          ct.c_void_p,
+                                                          ct.c_size_t]
             self.dll.kvReadDeviceCustomerData.errcheck = self._canErrorCheck
 
-            self.dll.kvFileGetCount.argtypes = [c_int, POINTER(c_int)]
+            self.dll.kvFileGetCount.argtypes = [ct.c_int, ct.POINTER(ct.c_int)]
             self.dll.kvFileGetCount.errcheck = self._canErrorCheck
 
-            self.dll.kvFileGetName.argtypes = [c_int, c_int, c_char_p,
-                                               c_int]
+            self.dll.kvFileGetName.argtypes = [ct.c_int, ct.c_int, ct.c_char_p,
+                                               ct.c_int]
             self.dll.kvFileGetName.errcheck = self._canErrorCheck
 
-            self.dll.kvFileCopyFromDevice.argtypes = [c_int, c_char_p,
-                                                      c_char_p]
+            self.dll.kvFileCopyFromDevice.argtypes = [ct.c_int, ct.c_char_p,
+                                                      ct.c_char_p]
             self.dll.kvFileCopyFromDevice.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptSendEvent.argtypes = [c_int, c_int, c_int, c_int,
-                                                   c_uint]
+            self.dll.kvScriptSendEvent.argtypes = [ct.c_int, ct.c_int,
+                                                   ct.c_int, ct.c_int,
+                                                   ct.c_uint]
             self.dll.kvScriptSendEvent.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptStart.argtypes = [c_int, c_int]
+            self.dll.kvScriptStart.argtypes = [ct.c_int, ct.c_int]
             self.dll.kvScriptStart.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptStop.argtypes = [c_int, c_int, c_int]
+            self.dll.kvScriptStop.argtypes = [ct.c_int, ct.c_int, ct.c_int]
             self.dll.kvScriptStop.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptUnload.argtypes = [c_int, c_int]
+            self.dll.kvScriptUnload.argtypes = [ct.c_int, ct.c_int]
             self.dll.kvScriptUnload.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarOpen.argtypes = [c_int, c_char_p,
-                                                    POINTER(c_int), POINTER(c_int)]
-            self.dll.kvScriptEnvvarOpen.restype = c_int64
+            self.dll.kvScriptEnvvarOpen.argtypes = [ct.c_int, ct.c_char_p,
+                                                    ct.POINTER(ct.c_int),
+                                                    ct.POINTER(ct.c_int)]
+            self.dll.kvScriptEnvvarOpen.restype = ct.c_int64
             self.dll.kvScriptEnvvarOpen.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarClose.argtypes = [c_int64]
+            self.dll.kvScriptEnvvarClose.argtypes = [ct.c_int64]
             self.dll.kvScriptEnvvarClose.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarSetInt.argtypes = [c_int64, c_int]
+            self.dll.kvScriptEnvvarSetInt.argtypes = [ct.c_int64, ct.c_int]
             self.dll.kvScriptEnvvarSetInt.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarGetInt.argtypes = [c_int64, POINTER(c_int)]
+            self.dll.kvScriptEnvvarGetInt.argtypes = [ct.c_int64,
+                                                      ct.POINTER(ct.c_int)]
             self.dll.kvScriptEnvvarGetInt.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarSetFloat.argtypes = [c_int64, c_float]
+            self.dll.kvScriptEnvvarSetFloat.argtypes = [ct.c_int64, ct.c_float]
             self.dll.kvScriptEnvvarSetFloat.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarGetFloat.argtypes = [c_int64, POINTER(c_float)]
+            self.dll.kvScriptEnvvarGetFloat.argtypes = [ct.c_int64,
+                                                        ct.POINTER(ct.c_float)]
             self.dll.kvScriptEnvvarGetFloat.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptEnvvarSetData.argtypes = [c_int64, c_void_p, c_int, c_int]
+            self.dll.kvScriptEnvvarSetData.argtypes = [ct.c_int64, ct.c_void_p,
+                                                       ct.c_int, ct.c_int]
             self.dll.kvScriptEnvvarSetData.errcheck = self._canErrorCheck
-            self.dll.kvScriptEnvvarGetData.argtypes = [c_int64, c_void_p, c_int, c_int]
+            self.dll.kvScriptEnvvarGetData.argtypes = [ct.c_int64, ct.c_void_p,
+                                                       ct.c_int, ct.c_int]
             self.dll.kvScriptEnvvarGetData.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptLoadFileOnDevice.argtypes = [c_int, c_int,
-                                                          c_char_p]
+            self.dll.kvScriptLoadFileOnDevice.argtypes = [ct.c_int, ct.c_int,
+                                                          ct.c_char_p]
             self.dll.kvScriptLoadFileOnDevice.errcheck = self._canErrorCheck
 
-            self.dll.kvScriptLoadFile.argtypes = [c_int, c_int, c_char_p]
+            self.dll.kvScriptLoadFile.argtypes = [ct.c_int, ct.c_int,
+                                                  ct.c_char_p]
             self.dll.kvScriptLoadFile.errcheck = self._canErrorCheck
 
-            self.dll.kvDeviceSetMode.argtypes = [c_int, c_int]
+            self.dll.kvDeviceSetMode.argtypes = [ct.c_int, ct.c_int]
             self.dll.kvDeviceSetMode.errcheck = self._canErrorCheck
 
-            self.dll.kvDeviceGetMode.argtypes = [c_int, POINTER(c_int)]
+            self.dll.kvDeviceGetMode.argtypes = [ct.c_int,
+                                                 ct.POINTER(ct.c_int)]
             self.dll.kvDeviceGetMode.errcheck = self._canErrorCheck
 
         except Exception as e:
@@ -452,39 +464,39 @@ class canlib(object):
 
     def getNumberOfChannels(self):
         self.fn = inspect.currentframe().f_code.co_name
-        chanCount = c_int()
+        chanCount = ct.c_int()
         self.dll.canGetNumberOfChannels(chanCount)
         return chanCount.value
 
     def getChannelData_Name(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        name = create_string_buffer(80)
+        name = ct.create_string_buffer(80)
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_DEVDESCR_ASCII,
-                                   byref(name), sizeof(name))
-        buf_type = c_uint * 1
+                                   ct.byref(name), ct.sizeof(name))
+        buf_type = ct.c_uint * 1
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CHAN_NO_ON_CARD,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         return "%s (channel %d)" % (name.value, buf[0])
 
     def getChannelData_CardNumber(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_ulong
+        buf_type = ct.c_ulong
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CARD_NUMBER,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         return buf.value
 
     def getChannelData_EAN(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_ulong * 2
+        buf_type = ct.c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CARD_UPC_NO,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         (ean_lo, ean_hi) = struct.unpack('LL', buf)
 
         return "%02x-%05x-%05x-%x" % (ean_hi >> 12,
@@ -493,40 +505,40 @@ class canlib(object):
 
     def getChannelData_EAN_short(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_ulong * 2
+        buf_type = ct.c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CARD_UPC_NO,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         (ean_lo, ean_hi) = struct.unpack('LL', buf)
         return "%04x-%x" % ((ean_lo >> 4) & 0xffff, ean_lo & 0xf)
 
     def getChannelData_Serial(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_ulong * 2
+        buf_type = ct.c_ulong * 2
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CARD_SERIAL_NO,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         (serial_lo, serial_hi) = struct.unpack('LL', buf)
         # serial_hi is always 0
         return serial_lo
 
     def getChannelData_DriverName(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        name = create_string_buffer(80)
+        name = ct.create_string_buffer(80)
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_DRIVER_NAME,
-                                   byref(name), sizeof(name))
+                                   ct.byref(name), ct.sizeof(name))
         return name.value
 
     def getChannelData_Firmware(self, channel):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_ushort * 4
+        buf_type = ct.c_ushort * 4
         buf = buf_type()
         self.dll.canGetChannelData(channel,
                                    canCHANNELDATA_CARD_FIRMWARE_REV,
-                                   byref(buf), sizeof(buf))
+                                   ct.byref(buf), ct.sizeof(buf))
         (build, release, minor, major) = struct.unpack('HHHH', buf)
         return (major, minor, build)
 
@@ -537,18 +549,18 @@ class canlib(object):
     def translateBaud(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
                       syncMode=0):
         self.fn = inspect.currentframe().f_code.co_name
-        freq_p = c_long(freq)
-        tseg1_p = c_int(tseg1)
-        tseg2_p = c_int(tseg2)
-        sjw_p = c_int(sjw)
-        nosamp_p = c_int(nosamp)
-        syncMode_p = c_int(syncMode)
-        self.dll.canTranslateBaud(byref(freq_p),
-                                  byref(tseg1_p),
-                                  byref(tseg2_p),
-                                  byref(sjw_p),
-                                  byref(nosamp_p),
-                                  byref(syncMode_p))
+        freq_p = ct.c_long(freq)
+        tseg1_p = ct.c_int(tseg1)
+        tseg2_p = ct.c_int(tseg2)
+        sjw_p = ct.c_int(sjw)
+        nosamp_p = ct.c_int(nosamp)
+        syncMode_p = ct.c_int(syncMode)
+        self.dll.canTranslateBaud(ct.byref(freq_p),
+                                  ct.byref(tseg1_p),
+                                  ct.byref(tseg2_p),
+                                  ct.byref(sjw_p),
+                                  ct.byref(nosamp_p),
+                                  ct.byref(syncMode_p))
         rateSetting = bitrateSetting(freq=freq_p.value, tseg1=tseg1_p.value,
                                      tseg2=tseg2_p.value, sjw=sjw_p.value,
                                      nosamp=nosamp_p.value,
@@ -586,15 +598,15 @@ class canChannel(object):
 
     def getBusParams(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        freq = c_long()
-        tseg1 = c_uint()
-        tseg2 = c_uint()
-        sjw = c_uint()
-        noSamp = c_uint()
-        syncmode = c_uint()
-        self.dll.canGetBusParams(self.handle, byref(freq), byref(tseg1),
-                                 byref(tseg2), byref(sjw), byref(noSamp),
-                                 byref(syncmode))
+        freq = ct.c_long()
+        tseg1 = ct.c_uint()
+        tseg2 = ct.c_uint()
+        sjw = ct.c_uint()
+        noSamp = ct.c_uint()
+        syncmode = ct.c_uint()
+        self.dll.canGetBusParams(self.handle, ct.byref(freq), ct.byref(tseg1),
+                                 ct.byref(tseg2), ct.byref(sjw),
+                                 ct.byref(noSamp), ct.byref(syncmode))
         return (freq.value, tseg1.value, tseg2.value, sjw.value, noSamp.value,
                 syncmode.value)
 
@@ -606,10 +618,10 @@ class canChannel(object):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canBusOff(self.handle)
 
-    # The variable name id (as used by canlib) is a built-in function in Python,
-    # so we use the name id_ instead
+    # The variable name id (as used by canlib) is a built-in function in
+    # Python, so we use the name id_ instead
     def write(self, id_, msg, flag=0):
-        self.canlib.fn = 'write'
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         if not isinstance(msg, (bytes, str)):
             if not isinstance(msg, bytearray):
                 msg = bytearray(msg)
@@ -644,14 +656,14 @@ class canChannel(object):
                           canMSGERR_xxx values
             time (float): Timestamp from hardware
         """
-        self.canlib.fn = 'read'
+        self.canlib.fn = inspect.currentframe().f_code.co_name
         # msg will be replaced by class when CAN FD is supported
         _MAX_SIZE = 8
-        msg = create_string_buffer(_MAX_SIZE)
-        id_ = c_long()
-        dlc = c_uint()
-        flag = c_uint()
-        time = c_ulong()
+        msg = ct.create_string_buffer(_MAX_SIZE)
+        id_ = ct.c_long()
+        dlc = ct.c_uint()
+        flag = ct.c_uint()
+        time = ct.c_ulong()
         self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout_ms)
         length = min(_MAX_SIZE, dlc.value)
         return(id_.value, bytearray(msg.raw[:length]), dlc.value, flag.value,
@@ -660,33 +672,37 @@ class canChannel(object):
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
         buf = create_string_buffer(8)
-        user = c_int(userNumber)
-        item = c_int(itemNumber)
+        user = ct.c_int(userNumber)
+        item = ct.c_int(itemNumber)
         self.dll.kvReadDeviceCustomerData(self.handle, user, item, buf,
-                                          sizeof(buf))
+                                          ct.sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
     def readSpecificSkip(self, id_, timeout_ms=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        msg = create_string_buf(8)
-        id_ = c_long(id_)
-        dlc = c_uint()
-        flag = c_uint()
-        time = c_ulong(timeout_ms)
+        # msg will be replaced by class when CAN FD is supported
+        _MAX_SIZE = 8
+        msg = ct.create_string_buffer(_MAX_SIZE)
+        id_ = ct.c_long(id_)
+        dlc = ct.c_uint()
+        flag = ct.c_uint()
+        time = ct.c_ulong(timeout_ms)
         self.dll.canReadSpecificSkip(self.handle, id_, msg, dlc, flag, time)
-        return id_.value, msg[:dlc.value], dlc.value, flag.value, time.value
+        length = min(_MAX_SIZE, dlc.value)
+        return(id_.value, bytearray(msg.raw[:length]), dlc.value, flag.value,
+               time.value)
 
     def readSyncSpecific(self, id_, timeout_ms=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        id_ = c_long(id_)
+        id_ = ct.c_long(id_)
         self.dll.canReadSyncSpecific(self.handle, id_, timeout_ms)
 
     def scriptSendEvent(self, slotNo=0, eventType=kvEVENT_TYPE_KEY,
                         eventNo=ord('a'), data=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        self.dll.kvScriptSendEvent(self.handle, c_int(slotNo),
-                                   c_int(eventType), c_int(eventNo),
-                                   c_uint(data))
+        self.dll.kvScriptSendEvent(self.handle, ct.c_int(slotNo),
+                                   ct.c_int(eventType), ct.c_int(eventNo),
+                                   ct.c_uint(data))
 
     def setBusOutputControl(self, drivertype=canDRIVER_NORMAL):
         self.canlib.fn = inspect.currentframe().f_code.co_name
@@ -697,20 +713,10 @@ class canChannel(object):
         self.dll.canIoCtl(self.handle, canIOCTL_FLUSH_RX_BUFFER, None, 0)
 
     def ioCtl_set_timer_scale(self, scale):
-        self.canlib.fn = 'ioCtl_set_timer_scale'
-        scale = c_long(scale)
-        self.dll.canIoCtl(self.handle, canIOCTL_SET_TIMER_SCALE, byref(scale), 4)
-
-    def getChannelData(self):
-        self.canlib.fn = 'getChannelData'
-        return (
-            self.canlib.getChannelData_Name(self.index),
-            self.canlib.getChannelData_CardNumber(self.index),
-            self.canlib.getChannelData_EAN(self.index),
-            self.canlib.getChannelData_EAN_short(self.index),
-            self.canlib.getChannelData_Serial(self.index),
-            self.canlib.getChannelData_DriverName(self.index),
-            self.canlib.getChannelData_Firmware(self.index))
+        self.canlib.fn = inspect.currentframe().f_code.co_name
+        scale = ct.c_long(scale)
+        self.dll.canIoCtl(self.handle, canIOCTL_SET_TIMER_SCALE,
+                          ct.byref(scale), ct.sizeof(scale))
 
     def getChannelData_Name(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
@@ -755,59 +761,67 @@ class canChannel(object):
     def scriptLoadFileOnDevice(self, slot, localFile):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvScriptLoadFileOnDevice(self.handle, slot,
-                                          c_char_p(localFile))
+                                          ct.c_char_p(localFile))
 
     def scriptLoadFile(self, slot, filePathOnPC):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        self.dll.kvScriptLoadFile(self.handle, slot, c_char_p(filePathOnPC))
+        self.dll.kvScriptLoadFile(self.handle, slot, ct.c_char_p(filePathOnPC))
 
     def scriptEnvvarOpen(self, name):
-        envvarType = c_int()
-        envvarSize = c_int()
-        envHandle = self.dll.kvScriptEnvvarOpen(self.handle, c_char_p(name), byref(envvarType),
-                                    byref(envvarSize))
+        envvarType = ct.c_int()
+        envvarSize = ct.c_int()
+        envHandle = self.dll.kvScriptEnvvarOpen(self.handle, ct.c_char_p(name),
+                                                ct.byref(envvarType),
+                                                ct.byref(envvarSize))
         return envHandle, envvarType.value, envvarSize.value
 
     def scriptEnvvarClose(self, envHandle):
-        self.dll.kvScriptEnvvarClose(c_int64(envHandle))
+        self.dll.kvScriptEnvvarClose(ct.c_int64(envHandle))
 
     def scriptEnvvarSetInt(self, envHandle, value):
         value = int(value)
-        self.dll.kvScriptEnvvarSetInt(c_int64(envHandle), c_int(value))
+        self.dll.kvScriptEnvvarSetInt(ct.c_int64(envHandle), ct.c_int(value))
 
     def scriptEnvvarGetInt(self, envHandle):
-        envvarValue = c_int()
-        self.dll.kvScriptEnvvarGetInt(c_int64(envHandle), byref(envvarValue))
+        envvarValue = ct.c_int()
+        self.dll.kvScriptEnvvarGetInt(ct.c_int64(envHandle),
+                                      ct.byref(envvarValue))
         return envvarValue.value
 
     def scriptEnvvarSetFloat(self, envHandle, value):
         value = float(value)
-        self.dll.kvScriptEnvvarSetFloat(c_int64(envHandle), c_float(value))
+        self.dll.kvScriptEnvvarSetFloat(ct.c_int64(envHandle),
+                                        ct.c_float(value))
 
     def scriptEnvvarGetFloat(self, envHandle):
-        envvarValue = c_float()
-        self.dll.kvScriptEnvvarGetFloat(c_int64(envHandle), byref(envvarValue))
+        envvarValue = ct.c_float()
+        self.dll.kvScriptEnvvarGetFloat(ct.c_int64(envHandle),
+                                        ct.byref(envvarValue))
         return envvarValue.value
 
     def scriptEnvvarSetData(self, envHandle, value, envSize):
-        self.dll.kvScriptEnvvarSetData(c_int64(envHandle), c_char_p(value), 0, c_int(envSize))
+        self.dll.kvScriptEnvvarSetData(ct.c_int64(envHandle),
+                                       ct.c_char_p(value), 0,
+                                       ct.c_int(envSize))
 
     def scriptEnvvarGetData(self, envHandle, envSize):
-        envvarValue = create_string_buffer(envSize)
-        self.dll.kvScriptEnvvarGetData(c_int64(envHandle), byref(envvarValue), 0, c_int(envSize))
+        envvarValue = ct.create_string_buffer(envSize)
+        self.dll.kvScriptEnvvarGetData(ct.c_int64(envHandle),
+                                       ct.byref(envvarValue), 0,
+                                       ct.c_int(envSize))
         return envvarValue.value
 
     def fileGetCount(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        count = c_int()
-        self.dll.kvFileGetCount(self.handle, byref(count))
+        count = ct.c_int()
+        self.dll.kvFileGetCount(self.handle, ct.byref(count))
         return count.value
 
     def fileGetName(self, fileNo):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        fileName = create_string_buffer(50)
-        self.dll.kvFileGetName(self.handle, c_int(fileNo), fileName,
-                               sizeof(fileName))
+        fileName = ct.create_string_buffer(50)
+        self.dll.kvFileGetName(self.handle, ct.c_int(fileNo), fileName,
+                               ct.sizeof(fileName))
         return fileName.value
 
     def fileCopyFromDevice(self, deviceFileName, hostFileName):
@@ -817,12 +831,12 @@ class canChannel(object):
 
     def kvDeviceSetMode(self, mode):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        self.dll.kvDeviceSetMode(self.handle, c_int(mode))
+        self.dll.kvDeviceSetMode(self.handle, ct.c_int(mode))
 
     def kvDeviceGetMode(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        mode = c_int()
-        self.dll.kvDeviceGetMode(self.handle, byref(mode))
+        mode = ct.c_int()
+        self.dll.kvDeviceGetMode(self.handle, ct.byref(mode))
         return mode.value
 
 
@@ -838,20 +852,22 @@ class envvar(object):
         self.__dict__['_attrib'] = {}
 
     def _ensure_open(self, name):
-        assert not name.startswith('_'), ("envvar names must not start with an underscore: %s" % name)
-
-        if name not in self.__dict__['_attrib']: # We just check the handle here
+        assert not name.startswith('_'), ("envvar names must not start"
+                                          " with an underscore: %s" % name)
+        # We just check the handle here
+        if name not in self.__dict__['_attrib']:
             self._attrib[name] = envvar.Attrib(*self._channel.scriptEnvvarOpen(name))
-
 
     def __getattr__(self, name):
         self._ensure_open(name)
+        handle = self._attrib[name].handle
         if self._attrib[name].type_ == kvENVVAR_TYPE_INT:
-            value = self._channel.scriptEnvvarGetInt(self._attrib[name].handle)
+            value = self._channel.scriptEnvvarGetInt(handle)
         elif self._attrib[name].type_ == kvENVVAR_TYPE_FLOAT:
-            value = self._channel.scriptEnvvarGetFloat(self._attrib[name].handle)
+            value = self._channel.scriptEnvvarGetFloat(handle)
         elif self._attrib[name].type_ == kvENVVAR_TYPE_STRING:
-            value = self._channel.scriptEnvvarGetData(self._attrib[name].handle, self._attrib[name].size)
+            size = self._attrib[name].size
+            value = self._channel.scriptEnvvarGetData(handle, size)
         else:
             msg = "getting is not implemented for type {type_}"
             msg = msg.format(type_=self._attrib[name].type_)
@@ -860,13 +876,15 @@ class envvar(object):
 
     def __setattr__(self, name, value):
         self._ensure_open(name)
+        handle = self._attrib[name].handle
         if self._attrib[name].type_ == kvENVVAR_TYPE_INT:
-            value = self._channel.scriptEnvvarSetInt(self._attrib[name].handle, value)
+            value = self._channel.scriptEnvvarSetInt(handle, value)
         elif self._attrib[name].type_ == kvENVVAR_TYPE_FLOAT:
-            value = self._channel.scriptEnvvarSetFloat(self._attrib[name].handle, value)
+            value = self._channel.scriptEnvvarSetFloat(handle, value)
         elif self._attrib[name].type_ == kvENVVAR_TYPE_STRING:
             value = str(value)
-            value = self._channel.scriptEnvvarSetData(self._attrib[name].handle, value, self._attrib[name].size)
+            size = self._attrib[name].size
+            value = self._channel.scriptEnvvarSetData(handle, value, size)
         else:
             msg = "setting is not implemented for type {type_}"
             msg = msg.format(type_=self._attrib[name].type_)
