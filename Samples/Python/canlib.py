@@ -671,7 +671,7 @@ class canChannel(object):
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
-        buf = create_string_buffer(8)
+        buf = ct.create_string_buffer(8)
         user = ct.c_int(userNumber)
         item = ct.c_int(itemNumber)
         self.dll.kvReadDeviceCustomerData(self.handle, user, item, buf,
