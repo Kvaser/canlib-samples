@@ -629,25 +629,33 @@ class canChannel(object):
     def read(self, timeout=0):
         """Read a CAN message and metadata.
 
-        :param timeout: Timeout in seconds, default 0
+        Reads a message from the receive buffer. If no message is available,
+        the function waits until a message arrives or a timeout occurs.
 
-        :returns (
-            CAN ID, 
-            Message_data - max length 8,
-            DLC - normally same as message length, but may be > 8?,
-            Flags - a combination of the canMSG_xxx and canMSGERR_xxx values,
-            Time - timestamp from hardware
-        )
-        :rtype (int, bytes, int, int, float)
+        Args:
+            timeout (int): Timeout in milliseconds, -1 gives an infinite
+                           timeout.
+
+        Returns:
+            id_ (int):    CAN identifier
+            msg (bytes):  CAN data - max length 8
+            dlc (int):    Data Length Code
+            flag (int):   Flags, a combination of the canMSG_xxx and
+                          canMSGERR_xxx values
+            time (float): Timestamp from hardware
         """
         self.canlib.fn = 'read'
-        msg = create_string_buffer(8)
+        # msg will be replaced by class when CAN FD is supported
+        _MAX_SIZE = 8
+        msg = create_string_buffer(_MAX_SIZE)
         id_ = c_long()
         dlc = c_uint()
         flag = c_uint()
         time = c_ulong()
         self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout)
-        return id_.value, bytearray(msg.raw[:dlc.value]), dlc.value, flag.value, time.value
+        length = min(_MAX_SIZE, dlc.value)
+        return(id_.value, bytearray(msg.raw[:length]), dlc.value, flag.value,
+               time.value)
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
