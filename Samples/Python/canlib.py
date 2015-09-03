@@ -674,7 +674,6 @@ class canChannel(object):
         flag = c_uint()
         time = c_ulong(timeout_ms)
         self.dll.canReadSpecificSkip(self.handle, id_, msg, dlc, flag, time)
-        # Why is id_ returned here? It is a constant.
         return id_.value, msg[:dlc.value], dlc.value, flag.value, time.value
 
     def readSyncSpecific(self, id_, timeout_ms=0):
