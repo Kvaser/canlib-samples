@@ -609,49 +609,65 @@ class canChannel(object):
     # The variable name id (as used by canlib) is a built-in function in Python,
     # so we use the name id_ instead
     def write(self, id_, msg, flag=0):
-        self.canlib.fn = inspect.currentframe().f_code.co_name
-        data = (c_ubyte * len(msg))(*msg)
-        self.dll.canWrite(self.handle, id_, byref(data), len(msg), flag)
+        self.canlib.fn = 'write'
+        if not isinstance(msg, (bytes, str)):
+            if not isinstance(msg, bytearray):
+                msg = bytearray(msg)
+            msg = bytes(msg)
+
+        self.dll.canWrite(self.handle, id_, msg, len(msg), flag)
 
     def writeWait(self, id_, msg, flag=0, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        data = (c_ubyte * len(msg))(*msg)
-        self.dll.canWriteWait(self.handle, id_, byref(data), len(msg), flag,
-                              timeout)
+        if not isinstance(msg, (bytes, str)):
+            if not isinstance(msg, bytearray):
+                msg = bytearray(msg)
+            msg = bytes(msg)
+
+        self.dll.canWriteWait(self.handle, id_, msg, len(msg), flag, timeout)
 
     def read(self, timeout=0):
-        self.canlib.fn = inspect.currentframe().f_code.co_name
-        msg = self.canlib.canMessage()
+        """Read a CAN message and metadata.
+
+        :param timeout: Timeout in seconds, default 0
+
+        :returns (
+            CAN ID, 
+            Message_data - max length 8,
+            DLC - normally same as message length, but may be > 8?,
+            Flags - a combination of the canMSG_xxx and canMSGERR_xxx values,
+            Time - timestamp from hardware
+        )
+        :rtype (int, bytes, int, int, float)
+        """
+        self.canlib.fn = 'read'
+        msg = create_string_buffer(8)
         id_ = c_long()
         dlc = c_uint()
         flag = c_uint()
         time = c_ulong()
-        self.dll.canReadWait(self.handle, byref(id_), byref(msg), byref(dlc),
-                             byref(flag), byref(time), timeout)
-        msgList = [msg[i] for i in range(len(msg))]
-        return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
+        self.dll.canReadWait(self.handle, id_, msg, dlc, flag, time, timeout)
+        return id_.value, bytearray(msg.raw[:dlc.value]), dlc.value, flag.value, time.value
 
     def readDeviceCustomerData(self, userNumber=100, itemNumber=0):
         self.fn = inspect.currentframe().f_code.co_name
-        buf_type = c_uint8 * 8
-        buf = buf_type()
+        buf = create_string_buffer(8)
         user = c_int(userNumber)
         item = c_int(itemNumber)
-        self.dll.kvReadDeviceCustomerData(self.handle, user, item, byref(buf),
+        self.dll.kvReadDeviceCustomerData(self.handle, user, item, buf,
                                           sizeof(buf))
         return struct.unpack('!Q', buf)[0]
 
     def readSpecificSkip(self, id_, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        msg = self.canlib.canMessage()
+        msg = create_string_buf(8)
         id_ = c_long(id_)
         dlc = c_uint()
         flag = c_uint()
-        time = c_ulong(timeout)
-        self.dll.canReadSpecificSkip(self.handle, id_, byref(msg), byref(dlc),
-                                     byref(flag), byref(time))
-        msgList = [msg[i] for i in range(len(msg))]
-        return id_.value, msgList[:dlc.value], dlc.value, flag.value, time.value
+        time = c_ulong(timeout)  # Is this really right? 
+        self.dll.canReadSpecificSkip(self.handle, id_, msg, dlc, flag, time)
+        # Why is id_ returned here? It is a constant.
+        return id_.value, msg[:dlc.value], dlc.value, flag.value, time.value
 
     def readSyncSpecific(self, id_, timeout=0):
         self.canlib.fn = inspect.currentframe().f_code.co_name
