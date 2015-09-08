@@ -133,7 +133,7 @@ class kvaMemoLibXml(object):
                                                   'kvamemolibxml.dll'))
     except Exception as e:
         print("Error loading dll from directory %s." % installDir)
-        print e
+        print(e)
         exit(1)
 
     def __init__(self):
