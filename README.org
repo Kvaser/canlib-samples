@@ -1,4 +1,7 @@
 * CANlib SDK Samples
+
+[[https://travis-ci.org/Kvaser/canlib-samples.svg?branch=master]]
+
 This repository contains an excerpt of the Samples directory from the CANlib SDK. This contains snapshots of the Python samples and can be referenced from the Kvaser Developer Blog at http://www.kvaser.com/support/developer-blog/.
 
 As snapshots, these files may evolve separately and are to considered BETA quality.

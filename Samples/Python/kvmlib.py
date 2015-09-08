@@ -376,7 +376,7 @@ class kvmlib(object):
         kvmlibDll = ct.WinDLL(os.path.join(installDir, 'kvmlib.dll'))
     except Exception as e:
         print("Error loading dll from directory %s." % installDir)
-        print e
+        print(e)
 
     def __init__(self):
         self.handle = None
