@@ -110,7 +110,13 @@ class kvaError(Exception):
 
 
 class kvaMemoLibXml(object):
+    """Wrapper class for the Kvaser kvaMemoLibXml.
 
+    This class wraps the Kvaser kvaMemoLibXml dll. For more info, see the
+    kvaMemoLibXml help files which are availible in the CANlib SDK.
+    http://www.kvaser.com/developer/canlib-sdk/
+
+    """
     installDir = os.environ.get('KVDLLPATH')
     if installDir is None:
         curDir = os.path.dirname(os.path.realpath(__file__))
@@ -179,13 +185,33 @@ class kvaMemoLibXml(object):
         return result
 
     def getVersion(self):
+        """Get the kvaMemoLibXml version number.
+
+        Returns the version number from the kvaMemoLibXml DLL currently in use.
+
+        Args:
+            None
+
+        Returns:
+            version (string): Major.minor version number
+        """
         self.fn = inspect.currentframe().f_code.co_name
         v = self.dll.kvaXmlGetVersion()
-        # qqqmac
         version = "%d.%d" % (v & 0xff, v >> 8)
         return version
 
     def kvaBufferToXml(self, conf_lif):
+        """Convert a buffer containg param.lif to XML settings.
+
+        Scripts from the param.lif will be written to current working
+        directory.
+
+        Args:
+            conf_lif (string): Buffer containing param.lif to convert.
+
+        Returns:
+            xml_buf (string): Buffer containing converted XML settings.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         version = ct.c_long(0)
         total_size = 500*1024
@@ -198,6 +224,14 @@ class kvaMemoLibXml(object):
         return xml_buf.value
 
     def kvaXmlToBuffer(self, conf_xml):
+        """Convert XML settings to param.lif buffer.
+
+        Args:
+            conf_xml (string): XML settings to convert.
+
+        Return:
+            lif_buf (string): Buffer containing converted param.lif.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         version = ct.c_long(0)
         total_size = 500*1024
@@ -208,11 +242,28 @@ class kvaMemoLibXml(object):
         return lif_buf.raw[:lif_size.value]
 
     def kvaXmlValidate(self, conf_xml):
+        """Validate a buffer with XML settings.
+
+        Args:
+            conf_xml (string): string containing the XML settings to validate.
+
+        Returns:
+            countErr (int):  Number of XML validation errors.
+            countWarn (int): Number of XML validation warnings.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         self.dll.kvaXmlValidate(ct.c_char_p(conf_xml), len(conf_xml))
         return self.xmlGetValidationStatusCount()
 
     def xmlGetValidationStatusCount(self):
+        """Get the number of validation statuses (if any).
+
+        Call after kvaXmlValidate().
+
+        Returns:
+            countErr (int):  Number of XML validation errors.
+            countWarn (int): Number of XML validation warnings.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         countErr = ct.c_int(0)
         countWarn = ct.c_int(0)
@@ -221,6 +272,15 @@ class kvaMemoLibXml(object):
         return (countErr.value, countWarn.value)
 
     def xmlGetValidationError(self):
+        """Get validation errors (if any).
+
+        Call after kvaXmlValidate() until return status is
+        KvaXmlValidationStatusOK.
+
+        Returns:
+            validationStatus (int): Validation status code.
+            text (string):          Validation status message.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         validationStatus = ct.c_int(-666)
         text = ct.create_string_buffer(1048)
@@ -229,6 +289,15 @@ class kvaMemoLibXml(object):
         return (validationStatus.value, text.value)
 
     def xmlGetValidationWarning(self):
+        """Get validation warnings (if any).
+
+        Call after kvaXmlValidate() until return status is
+        KvaXmlValidationStatusOK.
+
+        Returns:
+            validationStatus (int): Validation status code.
+            text (string):          Validation status message.
+        """
         self.fn = inspect.currentframe().f_code.co_name
         validationStatus = ct.c_int(-666)
         text = ct.create_string_buffer(1048)
@@ -237,6 +306,18 @@ class kvaMemoLibXml(object):
         return (validationStatus.value, text.value)
 
     def xmlGetLastError(self, kvaERR):
+        """Get the last error message (if any).
+
+        Get the last error message (if any) from conversion in human redable
+        format.
+
+        Args:
+            kvaERR (int): kvaMemoLibXml error code.
+
+        Returns:
+           msg (string): Error message associated with kvaERR.
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         msg = ct.create_string_buffer(1*1024)
         err = ct.c_int(kvaERR)

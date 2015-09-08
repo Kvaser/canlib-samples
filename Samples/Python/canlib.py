@@ -251,7 +251,13 @@ class bitrateSetting(object):
 # -------------------
 
 class canlib(object):
+    """Wrapper class for the Kvaser CANlib.
 
+    This class wraps the Kvaser CANlib dll. For more info, see the CANlib help
+    files which are availible in the CANlib SDK.
+    http://www.kvaser.com/developer/canlib-sdk/
+
+    """
     def __init__(self, debug=None):
         fmt = '[%(levelname)s] %(funcName)s: %(message)s'
         if debug:
@@ -457,18 +463,53 @@ class canlib(object):
         return result
 
     def getVersion(self):
+        """Get the CANlib version number.
+
+        Returns the CANlib version number from the CANlib DLL currently in use.
+
+        Args:
+            None
+
+        Returns:
+            version (canVersion): Major and minor version number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         v = self.dll.canGetVersion()
         version = canVersion(v & 0xff, v >> 8)
         return version
 
     def getNumberOfChannels(self):
+        """Get number of available CAN channels.
+
+        Returns the number of available CAN channels in the computer. The
+        virtual channels are included in this number.
+
+        Args:
+            None
+
+        Returns:
+            chanCount (int): Number of available CAN channels
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         chanCount = ct.c_int()
         self.dll.canGetNumberOfChannels(chanCount)
         return chanCount.value
 
     def getChannelData_Name(self, channel):
+        """Get the product name.
+
+        Retrieves the product name of the device connected to channel. The name
+        is returned as an ASCII string.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            name (string): The product name
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         name = ct.create_string_buffer(80)
         self.dll.canGetChannelData(channel,
@@ -482,6 +523,19 @@ class canlib(object):
         return "%s (channel %d)" % (name.value, buf[0])
 
     def getChannelData_CardNumber(self, channel):
+        """Get the card number
+
+        Retrieves the card's number in the computer. Each card type is numbered
+        separately. For example, the first PCIEcan card in a machine will have
+        number 0, the second PCIEcan number 1, etc.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            card_number (int): The device's card number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         buf_type = ct.c_ulong
         buf = buf_type()

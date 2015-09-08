@@ -345,7 +345,13 @@ class memoLogEventEx(ct.Structure):
 
 
 class kvmlib(object):
+    """Wrapper class for the Kvaser kvmlib.
 
+    This class wraps the Kvaser kvmlib dll. For more info, see the kvmlib help
+    files which are availible in the CANlib SDK.
+    http://www.kvaser.com/developer/canlib-sdk/
+
+    """
     @staticmethod
     def kvmDeviceTypeFromEan(ean):
         if(ean == '73-30130-00567-9' or ean == '73-30130-99010-4' or ean ==

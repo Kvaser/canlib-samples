@@ -179,6 +179,13 @@ class kvrConfig(object):
 
 
 class kvrlib(object):
+    """Wrapper class for the Kvaser kvrlib.
+
+    This class wraps the Kvaser kvrlib dll. For more info, see the kvrlib help
+    files which are availible in the CANlib SDK.
+    http://www.kvaser.com/developer/canlib-sdk/
+
+    """
 
     # ean:    73-30130-00671-3
     # ean_hi: 73301
@@ -509,6 +516,16 @@ class kvrlib(object):
         return result
 
     def getVersion(self):
+        """Get the kvrlib version number.
+
+        Returns the version number from the kvrlib DLL currently in use.
+
+        Args:
+            None
+
+        Returns:
+            version (string): Major.minor version number
+        """
         self.fn = inspect.currentframe().f_code.co_name
         return self.dll.kvrGetVersion()
 
