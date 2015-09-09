@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import kvMemoConfig
+mport kvMemoConfig
 import canlib
 import kvmlib
 import re
