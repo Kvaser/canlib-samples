@@ -321,6 +321,7 @@ class kvTrigAction(object):
     class function:
         START_LOG = 'ACTION_START_LOG'
         STOP_LOG = 'ACTION_STOP_LOG'
+        STOP_LOG_COMPLETELY = 'ACTION_STOP_LOG_COMPLETELY'
         ACTIVATE_AUTO_TRANSMIT_LIST = 'ACTION_ACTIVATE_AUTO_TRANSMIT_LIST'
         DEACTIVATE_AUTO_TRANSMIT_LIST = 'ACTION_DEACTIVATE_AUTO_TRANSMIT_LIST'
         EXTERNAL_PULSE = 'ACTION_EXTERNAL_PULSE'
@@ -433,7 +434,7 @@ class ValidationResult(object):
 
 class kvMemoConfig(object):
 
-    def __init__(self, version="2.0", afterburner=0, log_all=False,
+    def __init__(self, version="2.0", binary_version="5.0", afterburner=0, log_all=False,
                  fifo_mode="NO", param_lif=None, param_xml=None):
         if param_lif is not None:
             self.parseLif(param_lif)
@@ -450,6 +451,10 @@ class kvMemoConfig(object):
             root.appendChild(comment)
             child = self.document.createElement('VERSION')
             text = self.document.createTextNode(version)
+            child.appendChild(text)
+            root.appendChild(child)
+            child = self.document.createElement('BINARY_VERSION')
+            text = self.document.createTextNode(binary_version)
             child.appendChild(text)
             root.appendChild(child)
             xmlSettings = self.document.createElement('SETTINGS')
@@ -469,16 +474,11 @@ class kvMemoConfig(object):
             self.document.documentElement.appendChild(child)
         else:
             child = child[0]
-        PhSeg2 = rateParam.tseg2
-        PhSeg1 = PhSeg2
-        PrSeg = (rateParam.tseg1 + rateParam.tseg2) - (PhSeg1 + PhSeg2)
-        PSC = (16000000 / (rateParam.freq * (1 + PrSeg + PhSeg1 + PhSeg2))) - 1
         newchild = self.document.createElement('PARAMETERS')
         newchild.setAttribute('channel', str(channel))
-        newchild.setAttribute('phase_seg1', str(PhSeg1))
-        newchild.setAttribute('phase_seg2', str(PhSeg2))
-        newchild.setAttribute('prop_seg', str(PrSeg))
-        newchild.setAttribute('prescaler', str(PSC))
+        newchild.setAttribute('bitrate', str(rateParam.freq))
+        newchild.setAttribute('tseg1', str(rateParam.tseg1))
+        newchild.setAttribute('tseg2', str(rateParam.tseg2))
         newchild.setAttribute('sjw', str(rateParam.sjw))
         newchild.setAttribute('silent', "YES" if silent else "NO")
         child.appendChild(newchild)
@@ -624,11 +624,11 @@ if __name__ == '__main__':
     trigger.addTrigVarTimer(trigVarTimer)
     trigVarTimer = kvTrigVarTimer(idx="trigger_timer_1", offset=20)
     trigger.addTrigVarTimer(trigVarTimer)
-    trigStatement = kvTrigStatement(postFixExpr="trigger_timer_0",
-                                    function=ACTION_START_LOG)
+    trigStatement = kvTrigStatement(expression="trigger_timer_0",
+                                    function=kvTrigStatement.function.START_LOG)
     trigger.addStatement(trigStatement)
-    trigStatement = kvTrigStatement(postFixExpr="trigger_timer_1",
-                                    function=ACTION_STOP_LOG)
+    trigStatement = kvTrigStatement(expression="trigger_timer_1",
+                                    function=kvTrigStatement.function.START_LOG)
     trigger.addStatement(trigStatement)
     memoConfig.addTrigger(trigger)
 

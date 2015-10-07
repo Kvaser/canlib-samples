@@ -101,12 +101,17 @@ class memoMsg(object):
 
     def __init__(self, timestamp=None):
         self.timeStamp = timestamp
+        self.ignored = False
 
     def __str__(self):
-        if self.timeStamp is not None:
-            text = "t:%14s " % (self.timeStamp/1000000000.0)
+        if self.ignored:
+            text = "*t:"
         else:
-            text = "t:             - "
+            text = " t:"
+        if self.timeStamp is not None:
+            text += "%14s " % (self.timeStamp/1000000000.0)
+        else:
+            text += "             - "
         return text
 
     def __eq__(self, other):

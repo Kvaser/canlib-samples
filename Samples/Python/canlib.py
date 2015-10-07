@@ -545,6 +545,18 @@ class canlib(object):
         return buf.value
 
     def getChannelData_EAN(self, channel):
+        """Get EAN code
+
+        Retrieves the EAN number for the device connected to channel. If there
+        is no EAN number, "00-00000-00000-0" will be returned.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            ean (str): The device's EAN number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         buf_type = ct.c_ulong * 2
         buf = buf_type()
@@ -558,6 +570,19 @@ class canlib(object):
                                       (ean_lo >> 4) & 0xfffff, ean_lo & 0xf)
 
     def getChannelData_EAN_short(self, channel):
+        """Get short EAN code
+
+        Retrieves the short EAN number, aka product number, for the device
+        connected to channel. If there is no EAN number, "00000-0" will be
+        returned.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            ean (str): The device's shortened EAN number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         buf_type = ct.c_ulong * 2
         buf = buf_type()
@@ -568,6 +593,18 @@ class canlib(object):
         return "%04x-%x" % ((ean_lo >> 4) & 0xffff, ean_lo & 0xf)
 
     def getChannelData_Serial(self, channel):
+        """Get device serial number
+
+        Retrieves the serial number for the device connected to channel. If the
+        device does not have a serial number, 0 is returned.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            serial (int): The device serial number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         buf_type = ct.c_ulong * 2
         buf = buf_type()
@@ -866,28 +903,76 @@ class canChannel(object):
         return envvarValue.value
 
     def fileGetCount(self):
+        """Get the number of files on the device.
+
+        Returns:
+            count (int): The number of files.
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         count = ct.c_int()
         self.dll.kvFileGetCount(self.handle, ct.byref(count))
         return count.value
 
     def fileGetName(self, fileNo):
+        """Get the name of the file with the supplied number.
+
+        Args:
+            fileNo (int): The number of the file.
+
+        Returns:
+            fileName (string): The name of the file.
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         fileName = ct.create_string_buffer(50)
         self.dll.kvFileGetName(self.handle, ct.c_int(fileNo), fileName,
                                ct.sizeof(fileName))
         return fileName.value
 
+    def fileCopyToDevice(self, hostFileName, deviceFileName):
+        """Copy an arbitrary file from the host to the device.
+
+        Args:
+            hostFileName (string):   The target host file name.
+            deviceFileName (string): The device file name.
+        """
+        self.canlib.fn = inspect.currentframe().f_code.co_name
+        self.dll.kvFileCopyToDevice(self.handle, hostFileName,
+                                    deviceFileName)
+
     def fileCopyFromDevice(self, deviceFileName, hostFileName):
+        """Copy an arbitrary file from the device to the host.
+
+        Args:
+            deviceFileName (string): The device file name.
+            hostFileName (string):   The target host file name.
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvFileCopyFromDevice(self.handle, deviceFileName,
                                       hostFileName)
 
     def kvDeviceSetMode(self, mode):
+        """Set the current device's mode.
+
+        Note: The mode is device specific, which means that not all modes are
+        implemented in all products.
+
+        Args:
+            mode (int): One of the kvDEVICE_MODE_xxx constants, defining which
+                        mode to use.
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.kvDeviceSetMode(self.handle, ct.c_int(mode))
 
     def kvDeviceGetMode(self):
+        """Read the current device's mode.
+
+        Note: The mode is device specific, which means that not all modes are
+        implemented in all products.
+
+        Returns:
+            mode (int): One of the kvDEVICE_MODE_xxx constants, indicating
+                        which mode is in use.
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         mode = ct.c_int()
         self.dll.kvDeviceGetMode(self.handle, ct.byref(mode))
