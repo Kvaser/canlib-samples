@@ -6,6 +6,7 @@ python:
   - "3.3"
   - "3.4"
 install:
+  - "sudo apt-get update -myqq"
   - "sudo apt-get install pylint"
   - "pip install hacking"
 script:
