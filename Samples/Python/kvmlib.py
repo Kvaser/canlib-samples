@@ -331,6 +331,23 @@ class memoLogEventEx(ct.Structure):
 
     _fields_ = [('event', memoLogMrtEx)]
 
+    def _dlcToBytes(self, dlc):
+        if dlc < 9:
+            return dlc
+        if dlc == 9:
+            return 12
+        if dlc == 10:
+            return 16
+        if dlc == 11:
+            return 20
+        if dlc == 12:
+            return 24
+        if dlc == 13:
+            return 32
+        if dlc == 14:
+            return 48
+        return 64
+
     def createMemoEvent(self):
         type = self.event.raw.evType
 
@@ -355,6 +372,7 @@ class memoLogEventEx(ct.Structure):
                                 pretrigger=self.event.trig.preTrigger,
                                 posttrigger=self.event.trig.postTrigger,
                                 trigno=self.event.trig.trigNo)
+
         elif type == self.MEMOLOG_TYPE_VERSION:
             memoEvent = verMsg(lioMajor=self.event.ver.lioMajor,
                                lioMinor=self.event.ver.lioMinor,
@@ -385,11 +403,11 @@ class memoLogEventEx(ct.Structure):
             flags = self.event.msg.flags
             dlc = self.event.msg.dlc
             id = self.event.msg.id
-            data = " ".join("{:02x}".format(ord(c)) for c in
-                            self.event.msg.data)
+            data = self.event.msg.data[:self._dlcToBytes(dlc)]
+            dataString = " ".join(hex(c).split('x')[1] for c in data)
             text = ("t:%11f ch:%x f:%5x id:%4x dlc:%2d d:%s"
-                    " %x" % (timestamp/1000000000.0, channel, flags, id,
-                             dlc, data))
+                    % (timestamp/1000000000.0, channel, flags, id,
+                       dlc, dataString))
 
         if type == self.MEMOLOG_TYPE_TRIGGER:
             # evType = self.event.trig.evType
@@ -407,6 +425,23 @@ class memoLogEventEx(ct.Structure):
             text += "trigNo: 0x%02x, " % (trigNo)
             text += "pre-trigger: %d, " % (preTrigger)
             text += "post-trigger: %d)\n" % (postTrigger)
+
+        if type == self.MEMOLOG_TYPE_VERSION:
+            lioMajor = self.event.ver.lioMajor
+            lioMinor = self.event.ver.lioMinor
+            fwMajor = self.event.ver.fwMajor
+            fwMinor = self.event.ver.fwMinor
+            fwBuild = self.event.ver.fwBuild
+            serialNumber = self.event.ver.serialNumber
+            eanHi = self.event.ver.eanHi
+            eanLo = self.event.ver.eanLo
+            text = ("EAN:%02x-%05x-%05x-%x, " %
+                    (eanHi >> 12,
+                     ((eanHi & 0xfff) << 8) | (eanLo >> 24),
+                     (eanLo >> 4) & 0xfffff, eanLo & 0xf))
+            text += "S/N %d, " % serialNumber
+            text += "FW v%d.%d.%d, " % (fwMajor, fwMinor, fwBuild)
+            text += "LIO v%d.%d" % (lioMajor, lioMinor)
         return text
 
 
@@ -418,9 +453,6 @@ class kvmlib(object):
     http://www.kvaser.com/developer/canlib-sdk/
 
     """
-    @staticmethod
-    def kvmDeviceTypeFromEan(ean):
-        return kvmDEVICE_MHYDRA_EXT
 
     installDir = os.environ.get('KVDLLPATH')
     if installDir is None:
@@ -471,6 +503,18 @@ class kvmlib(object):
                                             ct.POINTER(ct.c_uint32),
                                             ct.POINTER(ct.c_uint32)]
         self.dll.kvmKmfGetUsage.errcheck = self._kvmErrorCheck
+
+        self.dll.kvmKmfOpen.argtypes = [ct.c_char_p,
+                                        ct.POINTER(ct.c_int32),
+                                        ct.c_int32]
+        self.dll.kvmKmfOpen.errcheck = self._kvmErrorCheck
+
+        self.dll.kvmKmfOpenEx.argtypes = [ct.c_char_p,
+                                          ct.POINTER(ct.c_int32),
+                                          ct.c_int32,
+                                          ct.POINTER(ct.c_int),
+                                          ct.POINTER(ct.c_int)]
+        self.dll.kvmKmfOpenEx.errcheck = self._kvmErrorCheck
 
         self.dll.kvmDeviceDiskSize.argtypes = [ct.c_void_p,
                                                ct.POINTER(ct.c_uint32)]
@@ -539,6 +583,9 @@ class kvmlib(object):
                                                ct.c_uint]
         self.dll.kvmKmfWriteConfig.errcheck = self._kvmErrorCheck
 
+        self.dll.kvmLogFileDeleteAll.argtypes = [ct.c_void_p]
+        self.dll.kvmLogFileDeleteAll.errcheck = self._kvmErrorCheck
+
         self.dll.kvmClose.argtypes = [ct.c_void_p]
         self.dll.errcheck = self._kvmErrorCheck
 
@@ -546,6 +593,16 @@ class kvmlib(object):
                                             ct.POINTER(ct.c_int32), ct.c_int32]
         self.dll.kvmKmeOpenFile.restype = ct.c_void_p
         self.dll.kvmKmeOpenFile.errcheck = self._kvmErrorCheck
+
+        self.dll.kvmKmeCreateFile.argtypes = [ct.c_char_p,
+                                              ct.POINTER(ct.c_int32),
+                                              ct.c_int32]
+        self.dll.kvmKmeCreateFile.restype = ct.c_void_p
+        self.dll.kvmKmeCreateFile.errcheck = self._kvmErrorCheck
+
+        self.dll.kvmKmeWriteEvent.argtypes = [ct.c_void_p,
+                                              ct.POINTER(memoLogEventEx)]
+        self.dll.kvmKmeWriteEvent.errcheck = self._kvmErrorCheck
 
         self.dll.kvmKmeCountEvents.argtypes = [ct.c_void_p,
                                                ct.POINTER(ct.c_uint32)]
@@ -623,6 +680,32 @@ class kvmlib(object):
                                 ct.byref(usedSectorCount))
         return ((totalSectorCount.value*512)/(1000*1000),
                 (usedSectorCount.value*512)/(1000*1000))
+
+    def kmfOpen(self, filename, deviceType=kvmDEVICE_MHYDRA):
+        self.fn = inspect.currentframe().f_code.co_name
+        status_p = ct.c_int()
+        self.handle = self.dll.kvmKmfOpen(filename, ct.byref(status_p),
+                                          deviceType)
+        if status_p.value < 0:
+            self.handle = None
+            print ("ERROR filename:%s, devicetype:%d\n" %
+                   (filename, deviceType))
+            raise kvmError(self, status_p.value)
+
+    def kmfOpenEx(self, filename, deviceType=kvmDEVICE_MHYDRA):
+        self.fn = inspect.currentframe().f_code.co_name
+        status_p = ct.c_int()
+        ldfMajor = ct.c_int()
+        ldfMinor = ct.c_int()
+        self.handle = self.dll.kvmKmfOpenEx(filename, ct.byref(status_p),
+                                            deviceType, ct.byref(ldfMajor),
+                                            ct.byref(ldfMinor))
+        if status_p.value < 0:
+            self.handle = None
+            print ("ERROR filename:%s, devicetype:%d\n" %
+                   (filename, deviceType))
+            raise kvmError(self, status_p.value)
+        return "%d.%d" % (ldfMajor.value, ldfMinor.value)
 
     def getDiskSize(self):
         # Deprecated, use deviceGetDiskSize() instead
@@ -727,6 +810,18 @@ class kvmlib(object):
         memoEvent = logevent.createMemoEvent()
         return memoEvent
 
+    def logFileReadEventLogFormat(self):
+        self.fn = inspect.currentframe().f_code.co_name
+        logevent = memoLogEventEx()
+        try:
+            self.dll.kvmLogFileReadEvent(self.handle, ct.byref(logevent))
+        except (kvmNoLogMsg):
+            return None
+        return logevent
+
+    def kmeWriteEvent(self, logevent):
+        self.dll.kvmKmeWriteEvent(self.kmeHandle, ct.byref(logevent))
+
     def readEvents(self):
         # Deprecated, use logFileReadEvents instead
         return self.logFileReadEvents()
@@ -761,6 +856,10 @@ class kvmlib(object):
         buf = ct.create_string_buffer(lifData)
         self.dll.kvmKmfWriteConfig(self.handle, ct.byref(buf), len(lifData))
 
+    def logFileDeleteAll(self):
+        self.fn = inspect.currentframe().f_code.co_name
+        self.dll.kvmLogFileDeleteAll(self.handle)
+
     def writeConfig(self, config):
         self.kmfWriteConfig(config.toLif())
 
@@ -787,11 +886,27 @@ class kvmlib(object):
         if self.kmeHandle is not None:
             self.kmeCloseFile()
         status_p = ct.c_int32()
-        self.kmeHandle = self.dll.kvmKmeOpenFile(filename, ct.byref(status_p),
+        self.kmeHandle = self.dll.kvmKmeOpenFile(filename,
+                                                 ct.byref(status_p),
                                                  filetype)
         if status_p.value != 0:
             self.kmeHandle = None
-            print("ERROR filename:%s, filetype:%s\n" % (filename, filetype))
+            print("ERROR kmeOpenFile failed with filename:"
+                  "%s, filetype:%s\n" % (filename, filetype))
+            raise kvmError(self, status_p.value)
+
+    def kmeCreateFile(self, filename, filetype=kvmFILE_KME40):
+        self.fn = inspect.currentframe().f_code.co_name
+        if self.kmeHandle is not None:
+            self.kmeCloseFile()
+        status_p = ct.c_int32()
+        self.kmeHandle = self.dll.kvmKmeCreateFile(filename,
+                                                   ct.byref(status_p),
+                                                   filetype)
+        if status_p.value != 0:
+            self.kmeHandle = None
+            print("ERROR kmeCreateFile failed with filename:"
+                  "%s, filetype:%s\n" % (filename, filetype))
             raise kvmError(self, status_p.value)
 
     def kmeCountEvents(self):

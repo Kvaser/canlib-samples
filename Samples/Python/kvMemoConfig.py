@@ -34,7 +34,7 @@ class kvFilter(object):
 
 class kvFilterMsgStop(object):
     def __init__(self, protocol="NONE", msgid=None, dlc=None, msgid_min=None,
-                 channel=0):
+                 channel=0, can_ext="NO"):
         self.msgid = msgid
         if msgid_min is None:
             msgid_min = msgid
@@ -42,6 +42,7 @@ class kvFilterMsgStop(object):
         self.dlc = dlc
         self.protocol = protocol
         self.channel = channel
+        self.can_ext = can_ext
 
 
 class kvTrigger(object):
@@ -501,6 +502,7 @@ class kvMemoConfig(object):
         xmlFilterMsg.setAttribute('msgid', str(filter.msgid))
         xmlFilterMsg.setAttribute('msgid_min', str(filter.msgid_min))
         xmlFilterMsg.setAttribute('protocol', str(filter.protocol))
+        xmlFilterMsg.setAttribute('can_ext', str(filter.can_ext))
         xmlChannel = self.document.createElement('CHANNEL')
         text = self.document.createTextNode(str(filter.channel))
         xmlChannel.appendChild(text)

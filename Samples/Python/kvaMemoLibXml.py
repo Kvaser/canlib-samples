@@ -179,6 +179,9 @@ class kvaMemoLibXml(object):
                                             ct.POINTER(ct.c_long)]
         self.dll.kvaXmlToBuffer.errcheck = self._kvaErrorCheck
 
+        self.dll.kvaXmlToFile.argtypes = [ct.c_char_p, ct.c_char_p]
+        self.dll.kvaXmlToFile.errcheck = self._kvaErrorCheck
+
     def _kvaErrorCheck(self, result, func, arguments):
         if result < 0:
             raise kvaError(self, result)
@@ -238,6 +241,18 @@ class kvaMemoLibXml(object):
         self.dll.kvaXmlToBuffer(ct.c_char_p(conf_xml), len(conf_xml), lif_buf,
                                 ct.byref(lif_size), ct.byref(version))
         return lif_buf.raw[:lif_size.value]
+
+
+    def kvaXmlToFile(self, xml_filename, binary_filename):
+        """Convert XML file to binary configuration file.
+
+        Args:
+            infile (string): Filename of file containing the XML settings.
+            outfile (string): Filename of binary configuration.
+        """
+        self.fn = inspect.currentframe().f_code.co_name
+        self.dll.kvaXmlToFile(xml_filename, binary_filename)
+
 
     def kvaXmlValidate(self, conf_xml):
         """Validate a buffer with XML settings.

@@ -71,7 +71,7 @@ class kvDevice():
         else:
             self.canlib = canlibHnd
         self._cardChannel = cardChannel
-        if ean is not None:
+        if ch is None and ean is not None:
             ch = self._findChannel(ean, serial, cardChannel)
 
         if ch is not None:
@@ -84,6 +84,7 @@ class kvDevice():
             self._ean = ean
             self._serial = serial
         self._channel = ch
+        self.noOfChannels = None
         self.memo = None
 
     def _loadInfo(self):
@@ -110,9 +111,7 @@ class kvDevice():
         # Deprecated, use memoOpen() instead.
         self.memoOpen()
 
-    def memoOpen(self, deviceType=None):
-        if deviceType is None:
-            deviceType = kvmlib.kvmlib.kvmDeviceTypeFromEan(self._ean)
+    def memoOpen(self, deviceType=kvmlib.kvmDEVICE_MHYDRA_EXT):
         self.memo = kvmlib.kvmlib()
         self.memo.deviceOpen(memoNr=self._card, devicetype=deviceType)
 
@@ -153,6 +152,9 @@ class kvDevice():
 
     def cardNumber(self):
         return self.channel.getChannelData_CardNumber()
+
+    def cardChannels(self):
+        return self.noOfChannels
 
     def cardChannel(self):
         """Read card channel number from device
@@ -202,11 +204,18 @@ class kvDevice():
         return 'kv-%s-%06d' % (ean_part[-5:], self._serial)
 
     def hasScript(self):
-        if self._ean == '73-30130-00567-9' or self._ean == '73-30130-00778-9':
+        if self._ean == '73-30130-00567-9' or self._ean == '73-30130-00778-9' or self._ean == '73-30130-00821-2' or self._ean == '73-30130-00819-9' \
+             or self._ean == '73-30130-00752-9' or self._ean == '73-30130-00779-6' :
             return True
         else:
             return False
 
+    def isLogger(self):
+        if self._ean == '73-30130-00567-9' or self._ean == '73-30130-00778-9' or self._ean == '73-30130-00821-2' or self._ean == '73-30130-00819-9':
+            return True
+        else:
+            return False
+            
     def open(self, flags=0, timeout=10, unloadCanlib=False):
         if self.channel is not None:
             self.close()
@@ -238,7 +247,15 @@ class kvDevice():
         """
         self.channel.write(message.id, message.data, message.flags,
                            message.dlc)
+                           
+    def writeWait(self, message, timeout):
+        """Write a CAN message to the bus.
 
+        Args:
+            message (kvMessage): The message to send
+        """
+        self.channel.writeWait(message.id, message.data, message.flags, message.dlc, timeout)
+                           
     def _findChannel(self, wanted_ean, wanted_serial=None, card_channel=0,
                      unloadCanlib=False):
         channel = None
@@ -250,25 +267,24 @@ class kvDevice():
             try:
                 ean = self.canlib.getChannelData_EAN(ch)
                 serial = self.canlib.getChannelData_Serial(ch)
+                c_channel = self.canlib.getChannelData_Chan_No_On_Card(ch)
             except canlib.canError as e:
                 if e.canERR == canlib.canERR_NOCARD:
                     print('Card was removed')
                     break
                 else:
-                    raise e
-            c_channel = self.canlib.getChannelData_Chan_No_On_Card(ch)
+                    raise e            
             if (ean == wanted_ean) and (c_channel == card_channel) and (
-                    serial == wanted_serial or wanted_serial is None):
+                    (serial == wanted_serial) or (wanted_serial is None)):
                 channel = ch
                 break
         return channel
 
     def _waitToDisappear(self, timeout=10):
         startTime = time.time()
-        print('Wait for disappear', end="")
+        print('Wait for disappear...', end="")
         while self._findChannel(self._ean, self._serial,
-                                self._cardChannel) is not None:
-            self.canlib.reinitializeLibrary
+                                self._cardChannel, unloadCanlib=True) is not None:
             if time.time() - startTime > timeout:
                 print("\nWARNING: Timeout (%s s) reached while waiting for"
                       " device (ean:%s, sn:%s) to disappear!" % (timeout,
@@ -277,7 +293,7 @@ class kvDevice():
                 print('I will keep running and assume that I was too slow...')
                 return
             time.sleep(1)
-            print('.', end="")
+            print('.\n', end="")
 
     def __ne__(self, other):
         return not self.__eq__(other)

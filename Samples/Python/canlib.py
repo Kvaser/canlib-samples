@@ -45,7 +45,7 @@ canFD_BITRATE_500K_80P = -1000
 canFD_BITRATE_1M_80P = -1001
 canFD_BITRATE_2M_80P = -1002
 canFD_BITRATE_4M_80P = -1003
-canFD_BITRATE_8M_80P = -1004
+canFD_BITRATE_8M_60P = -1004
 
 canIOCTL_PREFER_EXT = 1
 canIOCTL_PREFER_STD = 2
@@ -333,9 +333,9 @@ class canlib(object):
         else:
             self.dll = ct.CDLL('libcanlib.so')
 
-        # protptypes
+        # prototypes
         self.dll.canGetVersion.argtypes = []
-        self.dll.canGetVersion.restype = ct.c_short
+        self.dll.canGetVersion.restype  = ct.c_short
         self.dll.canGetVersion.errcheck = self._canErrorCheck
 
         self.dll.canGetNumberOfChannels.argtypes = [ct.POINTER(ct.c_int)]
@@ -950,8 +950,7 @@ class canChannel(object):
 
         """
         self.canlib.fn = inspect.currentframe().f_code.co_name
-        self.dll.canSetBusParamsFd(self.handle, freq_brs, tseg1_brs, tseg2_brs,
-                                   sjw_brs)
+        self.dll.canSetBusParamsFd(self.handle, freq_brs, tseg1_brs, tseg2_brs, sjw_brs)
 
     def getBusParamsFd(self):
         """Get bus timing parameters for BRS in CAN FD
@@ -1047,21 +1046,23 @@ class canChannel(object):
             dlc = len(msg)
         self.dll.canWrite(self.handle, id_, msg, dlc, flag)
 
-    def writeWait(self, id_, msg, flag=0, timeout=0):
+    def writeWait(self, id_, msg, flag=0, dlc=0, timeout=0):
         """Sends a CAN message and waits for it to be sent.
 
         This function sends a CAN message. It returns when the message is sent,
         or the timeout expires. This is a convenience function that combines
         write() and writeSync().
 
-        todo:: It should be possible to set dlc (which pads zero data). Convert
-        arguments to kvMessage class.
-
         Args:
             id_: The identifier of the CAN message to send.
             msg: An array or bytearray of the message data
             flag: A combination of message flags, canMSG_xxx. Use this
                 parameter e.g. to send extended (29-bit) frames.
+            dlc: The length of the message in bytes. For Classic CAN dlc can
+                be at most 8, unless canOPEN_ACCEPT_LARGE_DLC is used. For
+                CAN FD dlc can be one of the following 0-8, 12, 16, 20, 24,
+                32, 48, 64. Optional, if omitted, dlc is calculated from the
+                msg array.
             timeout: The timeout, in milliseconds. 0xFFFFFFFF gives an infinite
                 timeout.
 
@@ -1071,8 +1072,11 @@ class canChannel(object):
             if not isinstance(msg, bytearray):
                 msg = bytearray(msg)
             msg = bytes(msg)
+            
+        if (dlc == 0):
+            dlc = len(msg)
 
-        self.dll.canWriteWait(self.handle, id_, msg, len(msg), flag, timeout)
+        self.dll.canWriteWait(self.handle, id_, msg, dlc, flag, timeout)
 
     def read(self, timeout=0):
         """Read a CAN message and metadata.
