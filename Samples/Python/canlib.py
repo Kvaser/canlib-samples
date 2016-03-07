@@ -41,9 +41,11 @@ canBITRATE_50K = -7
 canBITRATE_83K = -8
 canBITRATE_10K = -9
 
-canFD_BITRATE_500K_80P = -1001
-canFD_BITRATE_1M_80P = -1002
-canFD_BITRATE_2M_80P = -1003
+canFD_BITRATE_500K_80P = -1000
+canFD_BITRATE_1M_80P = -1001
+canFD_BITRATE_2M_80P = -1002
+canFD_BITRATE_4M_80P = -1003
+canFD_BITRATE_8M_80P = -1004
 
 canIOCTL_PREFER_EXT = 1
 canIOCTL_PREFER_STD = 2
@@ -127,7 +129,7 @@ canMSG_ERROR_FRAME = 0x0020
 canMSG_TXACK = 0x0040
 canMSG_TXRQ = 0x0080
 canFDMSG_MASK = 0xff0000
-canFDMSG_EDL = 0x010000
+canFDMSG_FDF = 0x010000
 canFDMSG_BRS = 0x020000
 canFDMSG_ESI = 0x040000
 canMSGERR_MASK = 0xff00
@@ -163,6 +165,12 @@ kvENVVAR_TYPE_STRING = 3
 
 
 class canError(Exception):
+    """Base class for exceptions raised by the canlib class
+
+    Looks up the error text in the canlib dll and presents it together with the
+    error code and the wrapper function that triggered the exception.
+
+    """
     def __init__(self, canlib, canERR):
         self.canlib = canlib
         self.canERR = canERR
@@ -174,12 +182,20 @@ class canError(Exception):
         return msg.value
 
     def __str__(self):
+        """
+        Looks up the error text in the canlib dll and presents it together
+        with the error code and the wrapper function that triggered the
+        exception.
+        """
         return "[canError] %s: %s (%d)" % (self.fn,
                                            self.__canGetErrorText(),
                                            self.canERR)
 
 
 class canNoMsg(canError):
+    """Raised when no matching message was available
+
+    """
     def __init__(self, canlib, canERR):
         self.canlib = canlib
         self.canERR = canERR
@@ -189,6 +205,16 @@ class canNoMsg(canError):
 
 
 class canScriptFail(canError):
+    """Raised when a script call failed.
+
+    This exception represents several different failures, for example:
+    - Trying to load a corrupt file or not a .txe file
+    - Trying to start a t script that has not been loaded
+    - Trying to load a t script compiled with the wrong version of the t
+      compiler
+    - Trying to unload a t script that has not been stopped
+    - Trying to use an envvar that does not exist
+    """
     def __init__(self, canlib, canERR):
         self.canlib = canlib
         self.canERR = canERR
@@ -198,10 +224,18 @@ class canScriptFail(canError):
 
 
 class EnvvarException(Exception):
+    """Base class for exceptions related to environment variables.
+
+    """
     pass
 
 
 class EnvvarValueError(EnvvarException):
+    """
+    Raised when the type of the value does not match the type of the
+    environment variable.
+
+    """
     def __init__(self, envvar, type_, value):
         msg = ("invalid literal for envvar ({envvar}) with"
                " type {type_}: {value}")
@@ -210,6 +244,10 @@ class EnvvarValueError(EnvvarException):
 
 
 class EnvvarNameError(EnvvarException):
+    """
+    Raised when the name of the environment variable is illegal.
+
+    """
     def __init__(self, envvar):
         msg = "envvar names must not start with an underscore: {envvar}"
         msg.format(envvar=envvar)
@@ -217,16 +255,36 @@ class EnvvarNameError(EnvvarException):
 
 
 class canVersion(ct.Structure):
+    """
+    Class that holds CANlib version number.
+
+    """
     _fields_ = [
         ("minor", ct.c_uint8),
         ("major", ct.c_uint8),
         ]
 
     def __str__(self):
+        """
+        Presents the version number as 'major.minor'.
+        """
         return "%d.%d" % (self.major, self.minor)
 
 
 class bitrateSetting(object):
+    """
+    Class that holds bitrate setting.
+
+    Attributes:
+        freq: Bitrate in bit/s.
+        tseg1: Number of quanta from (but not including) the Sync Segment to
+            the sampling point.
+        tseg2: Number of quanta from the sampling point to the end of the bit.
+        sjw: The Synchronization Jump Width, can be 1,2,3, or 4.
+        nosamp: The number of sampling points, only 1 is supported.
+        syncMode: Unsupported and ignored.
+
+    """
     def __init__(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
                  syncMode=0):
         self.freq = freq
@@ -454,6 +512,9 @@ class canlib(object):
         self.dll.canUnloadLibrary()
 
     def _canErrorCheck(self, result, func, arguments):
+        """Error function used in ctype calls for canlib DLL.
+
+        """
         if result == canERR_NOMSG:
             raise canNoMsg(self, result)
         elif result == canERR_SCRIPT_FAIL:
@@ -521,6 +582,31 @@ class canlib(object):
                                    canCHANNELDATA_CHAN_NO_ON_CARD,
                                    ct.byref(buf), ct.sizeof(buf))
         return "%s (channel %d)" % (name.value, buf[0])
+
+    def getChannelData_Chan_No_On_Card(self, channel):
+        """Get the channel number on the card.
+
+        Retrieves the channel number, as numbered locally on the card, device
+        connected to channel.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            number (int): The local channel number
+
+        """
+        self.fn = inspect.currentframe().f_code.co_name
+        number = ct.c_ulong()
+        self.dll.canGetChannelData(channel,
+                                   canCHANNELDATA_CHAN_NO_ON_CARD,
+                                   ct.byref(number), ct.sizeof(number))
+        buf_type = ct.c_uint * 1
+        buf = buf_type()
+        self.dll.canGetChannelData(channel,
+                                   canCHANNELDATA_CHAN_NO_ON_CARD,
+                                   ct.byref(buf), ct.sizeof(buf))
+        return number.value
 
     def getChannelData_CardNumber(self, channel):
         """Get the card number
@@ -616,6 +702,19 @@ class canlib(object):
         return serial_lo
 
     def getChannelData_DriverName(self, channel):
+        """Get device driver name
+
+        Retrieves the name of the device driver (e.g. "kcany") for the device
+        connected to channel. The device driver names have no special meanings
+        and may change from a release to another.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            name (str): The device driver name
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         name = ct.create_string_buffer(80)
         self.dll.canGetChannelData(channel,
@@ -624,6 +723,20 @@ class canlib(object):
         return name.value
 
     def getChannelData_Firmware(self, channel):
+        """Get device firmware version
+
+        Retrieves the firmvare version numbers for the device connected to
+        channel.
+
+        Args:
+            channel (int): The channel you are interested in
+
+        Returns:
+            major (int): The major version number
+            minor (int): The minor version number
+            build (int): The build number
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         buf_type = ct.c_ushort * 4
         buf = buf_type()
@@ -634,18 +747,44 @@ class canlib(object):
         return (major, minor, build)
 
     def openChannel(self, channel, flags=0):
+        """Open CAN channel
+
+        Retrieves a canChannel object for the given CANlib channel number using
+        the supplied flags.
+
+        Args:
+            channel (int): CANlib channel number
+            flags (int): Flags, a combination of the canOPEN_xxx flag values.
+                Default is zero, i.e. no flags.
+
+        Returns:
+            A canChannel object created with channel and flags
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         return canChannel(self, channel, flags)
 
-    def translateBaud(self, freq=1000000, tseg1=4, tseg2=3, sjw=1, nosamp=1,
-                      syncMode=0):
+    def translateBaud(self, freq):
+        """Translate bitrate constant
+
+        This function translates the canBITRATE_xxx constants to their
+        corresponding bus parameter values.
+
+        Args:
+            freq: Any of the predefined constants canBITRATE_xxx
+
+        Returns:
+            A bitrateSetting object containing the actual values of
+                frequency, tseg1, tseg2 etc.
+
+        """
         self.fn = inspect.currentframe().f_code.co_name
         freq_p = ct.c_long(freq)
-        tseg1_p = ct.c_int(tseg1)
-        tseg2_p = ct.c_int(tseg2)
-        sjw_p = ct.c_int(sjw)
-        nosamp_p = ct.c_int(nosamp)
-        syncMode_p = ct.c_int(syncMode)
+        tseg1_p = ct.c_int()
+        tseg2_p = ct.c_int()
+        sjw_p = ct.c_int()
+        nosamp_p = ct.c_int()
+        syncMode_p = ct.c_int()
         self.dll.canTranslateBaud(ct.byref(freq_p),
                                   ct.byref(tseg1_p),
                                   ct.byref(tseg2_p),
@@ -659,14 +798,52 @@ class canlib(object):
         return rateSetting
 
     def unloadLibrary(self):
+        """Unload CANlib
+
+        Unload canlib and relase all handles. Normally not used, but is needed
+        under some circumstances to find new devices.
+
+        Note that this will invalidate all current handles.
+
+        """
+        self.fn = inspect.currentframe().f_code.co_name
         self.dll.canUnloadLibrary()
 
+    def initializeLibrary(self):
+        """Initialize CANlib library
+
+        This initializes the driver and must be called before any other
+        function in the CANlib DLL is used. This is handled in most cases by
+        the Python wrapper but if you want to trigger a re-enumeration of
+        connected devices, call this function.
+
+        Any errors encountered during library initialization will be "silent"
+        and an appropriate error code will be returned later on when an API
+        call that requires initialization is called.
+
+        """
+        self.fn = inspect.currentframe().f_code.co_name
+        self.dll.canInitializeLibrary()
+
     def reinitializeLibrary(self):
+        """Reinitializes the CANlib driver.
+
+        Convenience function that calls `unloadLibrary` and `initializeLibrary`
+        in succession.
+
+        """
+        self.fn = inspect.currentframe().f_code.co_name
         self.unloadLibrary()
         self.dll.canInitializeLibrary()
 
 
 class canChannel(object):
+    """Helper class that represents a CANlib channel.
+
+    This class wraps the canlib class and tries to implement a more Pythonic
+    interface to CANlib.
+
+    """
 
     def __init__(self, canlib, channel, flags=0):
         self.canlib = canlib
@@ -677,17 +854,67 @@ class canChannel(object):
         self.envvar = envvar(self)
 
     def close(self):
+        """Close CANlib channel
+
+        Closes the channel associated with the handle. If no other threads are
+        using the CAN circuit, it is taken off bus.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canClose(self.handle)
         self.handle = -1
 
     def setBusParams(self, freq, tseg1=0, tseg2=0, sjw=0, noSamp=0,
                      syncmode=0):
+        """Set bus timing parameters for classic CAN
+
+        This function sets the bus timing parameters for the specified CAN
+        controller.
+
+        The library provides default values for tseg1, tseg2, sjw and noSamp
+        when freq is specified to one of the pre-defined constants,
+        canBITRATE_xxx.
+
+        If freq is any other value, no default values are supplied by the
+        library.
+
+        If you are using multiple handles to the same physical channel, for
+        example if you are writing a threaded application, you must call
+        busOff() once for each handle. The same applies to busOn() - the
+        physical channel will not go off bus until the last handle to the
+        channel goes off bus.
+
+        Args:
+            freq: Bitrate in bit/s.
+            tseg1: Number of quanta from (but not including) the Sync Segment to
+                the sampling point.
+            tseg2: Number of quanta from the sampling point to the end of the bit.
+            sjw: The Synchronization Jump Width, can be 1,2,3, or 4.
+            nosamp: The number of sampling points, only 1 is supported.
+            syncMode: Unsupported and ignored.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canSetBusParams(self.handle, freq, tseg1, tseg2, sjw,
                                  noSamp, syncmode)
 
     def getBusParams(self):
+        """Get bus timing parameters for classic CAN
+
+        This function retrieves the current bus parameters for the specified
+        channel.
+
+        Returns: A tuple containing:
+            freq: Bitrate in bit/s.
+            tseg1: Number of quanta from (but not including) the Sync Segment
+                to the sampling point.
+            tseg2: Number of quanta from the sampling point to the end of the
+                bit.
+            sjw: The Synchronization Jump Width, can be 1,2,3, or 4.
+            noSamp: The number of sampling points, only 1 is supported.
+            syncmode: Unsupported, always read as zero.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         freq = ct.c_long()
         tseg1 = ct.c_uint()
@@ -701,26 +928,144 @@ class canChannel(object):
         return (freq.value, tseg1.value, tseg2.value, sjw.value, noSamp.value,
                 syncmode.value)
 
+    def setBusParamsFd(self, freq_brs, tseg1_brs=0, tseg2_brs=0, sjw_brs=0):
+        """Set bus timing parameters for BRS in CAN FD
+
+        This function sets the bus timing parameters used in BRS (Bit rate
+        switch) mode for the current CANlib channel.
+
+        The library provides default values for tseg1_brs, tseg2_brs and
+        sjw_brs when freq is specified to one of the pre-defined constants,
+        canFD_BITRATE_xxx.
+
+        If freq is any other value, no default values are supplied by the
+        library.
+
+        Args:
+            freq_brs: Bitrate in bit/s.
+            tseg1_brs: Number of quanta from (but not including) the Sync Segment to
+                the sampling point.
+            tseg2_brs: Number of quanta from the sampling point to the end of the bit.
+            sjw_brs: The Synchronization Jump Width.
+
+        """
+        self.canlib.fn = inspect.currentframe().f_code.co_name
+        self.dll.canSetBusParamsFd(self.handle, freq_brs, tseg1_brs, tseg2_brs,
+                                   sjw_brs)
+
+    def getBusParamsFd(self):
+        """Get bus timing parameters for BRS in CAN FD
+
+        This function retrieves the bus current timing parameters used in BRS
+        (Bit rate switch) mode for the current CANlib channel.
+
+        The library provides default values for tseg1_brs, tseg2_brs and
+        sjw_brs when freq is specified to one of the pre-defined constants,
+        canFD_BITRATE_xxx.
+
+        If freq is any other value, no default values are supplied by the
+        library.
+
+        Returns: A tuple containing:
+            freq_brs: Bitrate in bit/s.
+            tseg1_brs: Number of quanta from (but not including) the Sync Segment to
+                the sampling point.
+            tseg2_brs: Number of quanta from the sampling point to the end of the bit.
+            sjw_brs: The Synchronization Jump Width.
+
+        """
+        self.canlib.fn = inspect.currentframe().f_code.co_name
+        freq_brs = ct.c_long()
+        tseg1_brs = ct.c_uint()
+        tseg2_brs = ct.c_uint()
+        sjw_brs = ct.c_uint()
+        self.dll.canGetBusParamsFd(self.handle, ct.byref(freq_brs),
+                                   ct.byref(tseg1_brs), ct.byref(tseg2_brs),
+                                   ct.byref(sjw_brs))
+        return (freq_brs.value, tseg1_brs.value, tseg2_brs.value,
+                sjw_brs.value)
+
     def busOn(self):
+        """Takes the specified channel on-bus.
+
+        If you are using multiple handles to the same physical channel, for
+        example if you are writing a threaded application, you must call
+        busOn() once for each handle.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canBusOn(self.handle)
 
     def busOff(self):
+        """Takes the specified channel off-bus.
+
+        Closes the channel associated with the handle. If no other threads are
+        using the CAN circuit, it is taken off bus. The handle can not be used
+        for further references to the channel.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         self.dll.canBusOff(self.handle)
 
     # The variable name id (as used by canlib) is a built-in function in
     # Python, so we use the name id_ instead
-    def write(self, id_, msg, flag=0):
+    def write(self, id_, msg, flag=0, dlc=None):
+        """Send a CAN message.
+
+        This function sends a CAN message. Note that the message has been
+        queued for transmission when this calls return. It has not necessarily
+        been sent.
+
+        If you are using the same channel via multiple handles, note that the
+        default behaviour is that the different handles will "hear" each other
+        just as if each handle referred to a channel of its own. If you open,
+        say, channel 0 from thread A and thread B and then send a message from
+        thread A, it will be "received" by thread B. This behaviour can be
+        changed using canIOCTL_SET_LOCAL_TXECHO.
+
+        The variable name id (as used by canlib) is a built-in function in
+        Python, so the name id_ is used instead.
+
+        Args:
+            id_: The identifier of the CAN message to send.
+            msg: An array or bytearray of the message data
+            flag: A combination of message flags, canMSG_xxx. Use this
+                parameter e.g. to send extended (29-bit) frames.
+            dlc: The length of the message in bytes. For Classic CAN dlc can
+                be at most 8, unless canOPEN_ACCEPT_LARGE_DLC is used. For
+                CAN FD dlc can be one of the following 0-8, 12, 16, 20, 24,
+                32, 48, 64. Optional, if omitted, dlc is calculated from the
+                msg array.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         if not isinstance(msg, (bytes, str)):
             if not isinstance(msg, bytearray):
                 msg = bytearray(msg)
             msg = bytes(msg)
-
-        self.dll.canWrite(self.handle, id_, msg, len(msg), flag)
+        if dlc is None:
+            dlc = len(msg)
+        self.dll.canWrite(self.handle, id_, msg, dlc, flag)
 
     def writeWait(self, id_, msg, flag=0, timeout=0):
+        """Sends a CAN message and waits for it to be sent.
+
+        This function sends a CAN message. It returns when the message is sent,
+        or the timeout expires. This is a convenience function that combines
+        write() and writeSync().
+
+        todo:: It should be possible to set dlc (which pads zero data). Convert
+        arguments to kvMessage class.
+
+        Args:
+            id_: The identifier of the CAN message to send.
+            msg: An array or bytearray of the message data
+            flag: A combination of message flags, canMSG_xxx. Use this
+                parameter e.g. to send extended (29-bit) frames.
+            timeout: The timeout, in milliseconds. 0xFFFFFFFF gives an infinite
+                timeout.
+
+        """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         if not isinstance(msg, (bytes, str)):
             if not isinstance(msg, bytearray):
@@ -749,7 +1094,7 @@ class canChannel(object):
         """
         self.canlib.fn = inspect.currentframe().f_code.co_name
         # msg will be replaced by class when CAN FD is supported
-        _MAX_SIZE = 8
+        _MAX_SIZE = 64
         msg = ct.create_string_buffer(_MAX_SIZE)
         id_ = ct.c_long()
         dlc = ct.c_uint()
@@ -772,7 +1117,7 @@ class canChannel(object):
     def readSpecificSkip(self, id_):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         # msg will be replaced by class when CAN FD is supported
-        _MAX_SIZE = 8
+        _MAX_SIZE = 64
         msg = ct.create_string_buffer(_MAX_SIZE)
         id_ = ct.c_long(id_)
         dlc = ct.c_uint()
@@ -812,6 +1157,10 @@ class canChannel(object):
     def getChannelData_Name(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
         return self.canlib.getChannelData_Name(self.index)
+
+    def getChannelData_Chan_No_On_Card(self):
+        self.canlib.fn = inspect.currentframe().f_code.co_name
+        return self.canlib.getChannelData_Chan_No_On_Card(self.index)
 
     def getChannelData_CardNumber(self):
         self.canlib.fn = inspect.currentframe().f_code.co_name
@@ -1069,6 +1418,7 @@ if __name__ == '__main__':
             print("%9d  %9d  0x%02x  %d  %s" % (msgId, time, flg, dlc, msg))
             for i in range(dlc):
                 msg[i] = (msg[i]+1) % 256
+                print(msg, ''.join('{:02x}'.format(x) for x in msg))
             ch1.write(msgId, msg, flg)
         except (canNoMsg) as ex:
             None

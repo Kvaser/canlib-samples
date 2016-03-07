@@ -46,15 +46,10 @@ class kvFilterMsgStop(object):
 
 class kvTrigger(object):
 
-    def __init__(self, logmode=TRIG_LOG_ALL, fifomode=True):  # qqqmac rename logmode -> logAll
+    def __init__(self, logmode=TRIG_LOG_ALL, fifomode=True):
         self.logmode = logmode
         self.fifomode = fifomode
-        self.trigVarStartup = []
-        self.trigVarTimer = []
-        self.trigVarMsgId = []
-        self.trigVarMsgDlc = []
-        self.trigVarMsgErrorFrame = []
-        self.trigVarSigVal = []
+        self.trigVar = []
         self.statement = []
 
     def add(self, obj):
@@ -65,27 +60,7 @@ class kvTrigger(object):
 
     def getXmlTriggers(self, document):
         xmlTriggers = document.createElement('TRIGGERS')
-        for obj in self.trigVarStartup:
-            xmlTrigger = obj.getXml(document)
-            xmlTriggers.appendChild(xmlTrigger)
-
-        for obj in self.trigVarTimer:
-            xmlTrigger = obj.getXml(document)
-            xmlTriggers.appendChild(xmlTrigger)
-
-        for obj in self.trigVarMsgId:
-            xmlTrigger = obj.getXml(document)
-            xmlTriggers.appendChild(xmlTrigger)
-
-        for obj in self.trigVarMsgDlc:
-            xmlTrigger = obj.getXml(document)
-            xmlTriggers.appendChild(xmlTrigger)
-
-        for obj in self.trigVarMsgErrorFrame:
-            xmlTrigger = obj.getXml(document)
-            xmlTriggers.appendChild(xmlTrigger)
-
-        for obj in self.trigVarSigVal:
+        for obj in self.trigVar:
             xmlTrigger = obj.getXml(document)
             xmlTriggers.appendChild(xmlTrigger)
         return xmlTriggers
@@ -109,10 +84,23 @@ class kvTrigVarStartup(object):
         self.name = name
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarStartup.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_STARTUP')
+        xmlTrigger.setAttribute('name', self.name)
+        return xmlTrigger
+
+
+class kvTrigVarDiskFull(object):
+    def __init__(self, name="trigger_diskfull_0"):
+        self.name = name
+
+    def addToTriggerList(self, triggerList):
+        triggerList.trigVar.append(self)
+
+    def getXml(self, document):
+        xmlTrigger = document.createElement('TRIGGER_DISK_FULL')
         xmlTrigger.setAttribute('name', self.name)
         return xmlTrigger
 
@@ -127,7 +115,7 @@ class kvTrigVarTimer(object):
         self.timeout = timeout
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarTimer.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_TIMER')
@@ -155,7 +143,7 @@ class kvTrigVarMsgId(object):
             self.msgid_min = self.msgid
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarMsgId.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_MSG_ID')
@@ -185,7 +173,7 @@ class kvTrigVarMsgDlc(object):
             self.dlc_min = self.dlc
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarMsgDlc.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_MSG_DLC')
@@ -205,7 +193,7 @@ class kvTrigVarMsgErrorFrame(object):
         self.timeout = timeout
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarMsgErrorFrame.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_MSG_ERROR_FRAME')
@@ -259,7 +247,7 @@ class kvTrigVarSigVal(object):
             self.data_min = self.data
 
     def addToTriggerList(self, triggerList):
-        triggerList.trigVarSigVal.append(self)
+        triggerList.trigVar.append(self)
 
     def getXml(self, document):
         xmlTrigger = document.createElement('TRIGGER_SIGVAL')
@@ -410,6 +398,7 @@ class kvTransmitList(object):
             xmlTransmitList.appendChild(xmlTransmitMessage)
         return xmlTransmitList
 
+
 class kvTransmitMessage(object):
     def __init__(self, name, channel=0):
         self.name = name
@@ -434,8 +423,9 @@ class ValidationResult(object):
 
 class kvMemoConfig(object):
 
-    def __init__(self, version="2.0", binary_version="5.0", afterburner=0, log_all=False,
-                 fifo_mode="NO", param_lif=None, param_xml=None):
+    def __init__(self, version="2.0", binary_version="6.0", afterburner=0,
+                 log_all=False, fifo_mode="NO", param_lif=None,
+                 param_xml=None):
         if param_lif is not None:
             self.parseLif(param_lif)
         elif param_xml is not None:
@@ -467,7 +457,8 @@ class kvMemoConfig(object):
             xmlCanpower.setAttribute('timeout', str(afterburner))
             xmlSettings.appendChild(xmlCanpower)
 
-    def addBusparams(self, rateParam, channel=0, silent=False):
+    def addBusparams(self, rateParam, channel=0, silent=False,
+                     rateParamFd=None, iso=None):
         child = self.document.getElementsByTagName('CAN_BUS')
         if not child:
             child = self.document.createElement('CAN_BUS')
@@ -481,6 +472,15 @@ class kvMemoConfig(object):
         newchild.setAttribute('tseg2', str(rateParam.tseg2))
         newchild.setAttribute('sjw', str(rateParam.sjw))
         newchild.setAttribute('silent', "YES" if silent else "NO")
+        if rateParamFd is not None:
+            newchild.setAttribute('bitrate_brs', str(rateParamFd.freq))
+            newchild.setAttribute('tseg1_brs', str(rateParamFd.tseg1))
+            newchild.setAttribute('tseg2_brs', str(rateParamFd.tseg2))
+            newchild.setAttribute('sjw_brs', str(rateParamFd.sjw))
+            if iso is None:
+                iso = True
+        if iso is not None:
+            newchild.setAttribute('iso', "YES" if iso else "NO")
         child.appendChild(newchild)
 
     def add(self, obj):

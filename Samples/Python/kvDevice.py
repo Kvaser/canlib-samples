@@ -1,13 +1,28 @@
 from __future__ import print_function
 
-import kvMemoConfig
-import canlib
-import kvmlib
 import re
 import time
 
+import kvMemoConfig
+import canlib
+import kvmlib
+
 
 class kvDevice():
+    """Holds information about a Kvaser CAN device
+
+    Args:
+        ch (int): CANlib channel where the device is currently connected.
+        flags (int): Optional flags such as canlib.canOPEN_EXCLUSIVE.
+        canlibHnd : Optional canlib.canlib object, usually creates a new one.
+        ean (str): EAN for the device, e.g. "73-30130-00778-9". Used instead of
+            ch.
+        serial (str): Optional serial number of the device, can be used in
+            conjuntion with ean.
+        cardChannel (int): Optional local channel on card, can be used in
+            conjunction with ean.
+
+    """
     # ean:    73-30130-00671-3
     # ean_hi: 73301
     # ean_lo: 30006713
@@ -50,14 +65,14 @@ class kvDevice():
         return devices
 
     def __init__(self, ch=None, flags=0, canlibHnd=None, ean=None,
-                 serial=None):
+                 serial=None, cardChannel=0):
         if canlibHnd is None:
             self.canlib = canlib.canlib()
         else:
             self.canlib = canlibHnd
-
+        self._cardChannel = cardChannel
         if ean is not None:
-            ch = self._findChannel(ean, serial)
+            ch = self._findChannel(ean, serial, cardChannel)
 
         if ch is not None:
             self.channel = self.canlib.openChannel(ch, flags)
@@ -80,6 +95,7 @@ class kvDevice():
             self._fw = self.fw()
             self._driver = self.driverName()
             self._defaultHostname = self.defaultHostname()
+            self._cardChannel = self.cardChannel()
         else:
             self.channel = None
             self._card = None
@@ -94,8 +110,9 @@ class kvDevice():
         # Deprecated, use memoOpen() instead.
         self.memoOpen()
 
-    def memoOpen(self):
-        deviceType = kvmlib.kvmlib.kvmDeviceTypeFromEan(self._ean)
+    def memoOpen(self, deviceType=None):
+        if deviceType is None:
+            deviceType = kvmlib.kvmlib.kvmDeviceTypeFromEan(self._ean)
         self.memo = kvmlib.kvmlib()
         self.memo.deviceOpen(memoNr=self._card, devicetype=deviceType)
 
@@ -137,8 +154,20 @@ class kvDevice():
     def cardNumber(self):
         return self.channel.getChannelData_CardNumber()
 
+    def cardChannel(self):
+        """Read card channel number from device
+
+        Returns:
+            cardChannel (int): The local channel on card, first channel is
+                number 0.
+        """
+        return self.channel.getChannelData_Chan_No_On_Card()
+
     def close(self):
-        self.channel.close()
+        try:
+            self.channel.close()
+        except canlib.canError as e:
+            print("\nWARNING: ", e)
         self.channel = None
 
     def driverName(self):
@@ -178,12 +207,13 @@ class kvDevice():
         else:
             return False
 
-    def open(self, flags=0, timeout=10):
+    def open(self, flags=0, timeout=10, unloadCanlib=False):
         if self.channel is not None:
             self.close()
         startTime = time.time()
         while True:
-            ch = self._findChannel(self._ean, self._serial)
+            ch = self._findChannel(self._ean, self._serial, self._cardChannel,
+                                   unloadCanlib=unloadCanlib)
             if ch is not None:
                 self.channel = self.canlib.openChannel(ch, flags)
                 self._channel = ch
@@ -200,9 +230,22 @@ class kvDevice():
             raise Exception("ERROR: Could not find device %s %s (timeout: %d"
                             " s)." % (self._ean, self._serial, timeout))
 
-    def _findChannel(self, wanted_ean, wanted_serial=None):
+    def write(self, message):
+        """Write a CAN message to the bus.
+
+        Args:
+            message (kvMessage): The message to send
+        """
+        self.channel.write(message.id, message.data, message.flags,
+                           message.dlc)
+
+    def _findChannel(self, wanted_ean, wanted_serial=None, card_channel=0,
+                     unloadCanlib=False):
         channel = None
-        self.canlib.reinitializeLibrary()
+        if unloadCanlib:
+            self.canlib.reinitializeLibrary()
+        else:
+            self.canlib.initializeLibrary()
         for ch in range(self.canlib.getNumberOfChannels()):
             try:
                 ean = self.canlib.getChannelData_EAN(ch)
@@ -213,7 +256,8 @@ class kvDevice():
                     break
                 else:
                     raise e
-            if (ean == wanted_ean) and (
+            c_channel = self.canlib.getChannelData_Chan_No_On_Card(ch)
+            if (ean == wanted_ean) and (c_channel == card_channel) and (
                     serial == wanted_serial or wanted_serial is None):
                 channel = ch
                 break
@@ -222,7 +266,9 @@ class kvDevice():
     def _waitToDisappear(self, timeout=10):
         startTime = time.time()
         print('Wait for disappear', end="")
-        while self._findChannel(self._ean, self._serial) is not None:
+        while self._findChannel(self._ean, self._serial,
+                                self._cardChannel) is not None:
+            self.canlib.reinitializeLibrary
             if time.time() - startTime > timeout:
                 print("\nWARNING: Timeout (%s s) reached while waiting for"
                       " device (ean:%s, sn:%s) to disappear!" % (timeout,
@@ -262,6 +308,7 @@ class kvDevice():
         text = text + 'FW            : %s\n' % fwVersion
         text = text + 'Card          : %s\n' % self._card
         text = text + 'Drv           : %s\n' % self._driver
+        text = text + 'Card channel  : %s\n' % self._cardChannel
         text = text + 'Canlib channel: %s\n' % self._channel
         return text
 

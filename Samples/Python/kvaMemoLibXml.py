@@ -122,7 +122,7 @@ class kvaMemoLibXml(object):
         curDir = os.path.dirname(os.path.realpath(__file__))
         baseDir = os.path.join(curDir, "..", "..")
         if 8 * struct.calcsize("P") == 32:
-            installDir = os.path.join(baseDir, "Bin")
+            installDir = os.path.join(baseDir, "bin")
         else:
             installDir = os.path.join(baseDir, "bin_x64")
 
@@ -214,9 +214,8 @@ class kvaMemoLibXml(object):
         """
         self.fn = inspect.currentframe().f_code.co_name
         version = ct.c_long(0)
-        total_size = 500*1024
-        xml_size = ct.c_uint(total_size)
-        xml_buf = ct.create_string_buffer(total_size)
+        xml_buf = ct.create_string_buffer(500*1024)
+        xml_size = ct.c_uint(ct.sizeof(xml_buf))
         script_path = ct.c_char_p("")
         self.dll.kvaBufferToXml(ct.c_char_p(conf_lif), len(conf_lif), xml_buf,
                                 ct.byref(xml_size), ct.byref(version),
@@ -234,9 +233,8 @@ class kvaMemoLibXml(object):
         """
         self.fn = inspect.currentframe().f_code.co_name
         version = ct.c_long(0)
-        total_size = 500*1024
-        lif_size = ct.c_uint(total_size)
-        lif_buf = ct.create_string_buffer(total_size)
+        lif_buf = ct.create_string_buffer(320*32*1024)
+        lif_size = ct.c_uint(ct.sizeof(lif_buf))
         self.dll.kvaXmlToBuffer(ct.c_char_p(conf_xml), len(conf_xml), lif_buf,
                                 ct.byref(lif_size), ct.byref(version))
         return lif_buf.raw[:lif_size.value]

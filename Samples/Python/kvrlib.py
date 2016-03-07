@@ -658,8 +658,24 @@ class kvrDeviceInfo(ct.Structure):
     def disconnect(self):
         self.request_connection = 0
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        if(self.ean_lo == other.ean_lo and
+           self.ean_lo == other.ean_lo and
+           self.ser_no == other.ser_no):
+            return True
+        else:
+            return False
+
+    def __hash__(self):
+        return hash("%x %x %d" % (self.ean_hi, self.ean_lo, self.ser_no))
+
     def __str__(self):
-        text = ""
+        text = "\n"
         acc_pwd = "no"
         enc_key = "no"
 
